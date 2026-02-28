@@ -19,38 +19,16 @@ const FontManager = {
   //  style   : 폰트 스타일 (normal / italic)
   // ─────────────────────────────────────────────────────────────
   FONTS: [
-    // ── 기본 내장 폰트 (CDN, 오프라인 불가) ──────────────────
-    // 사지방 인터넷 된다면 CDN 폰트도 사용 가능
-    // 아래는 로컬 파일 폰트 예시 — assets/fonts/ 에 파일 넣으면 활성화됨
-
-    // {
-    //   key:    'MainFont',
-    //   family: 'MainFont',
-    //   src:    'assets/fonts/your-font.woff2',
-    //   weight: 'normal',
-    //   style:  'normal',
-    // },
-    // {
-    //   key:    'MainFont-Bold',
-    //   family: 'MainFont',
-    //   src:    'assets/fonts/your-font-bold.woff2',
-    //   weight: 'bold',
-    //   style:  'normal',
-    // },
-
-    // ── 실제 폰트 추가 예시 ──────────────────────────────────
-    // 나눔명조 (한글 명조체)
-    // {
-    //   key:    'NanumMyeongjo',
-    //   family: 'NanumMyeongjo',
-    //   src:    'assets/fonts/NanumMyeongjo.woff2',
-    //   weight: 'normal',
-    //   style:  'normal',
-    // },
+    {
+      key:    'NeoDunggeunmoPro',
+      family: 'NeoDunggeunmoPro',
+      src:    'assets/fonts/NeoDunggeunmoPro-Regular.woff2',
+      weight: 'normal',
+      style:  'normal',
+    },
   ],
 
-  // ── 폴백 폰트 (로컬 폰트 로드 실패 시 사용) ──────────────
-  FALLBACK: 'serif',
+  FALLBACK: "'NeoDunggeunmoPro', monospace",
 
   // ── 초기화 ───────────────────────────────────────────────────
   //  게임 시작 전(Phaser 초기화 전)에 호출

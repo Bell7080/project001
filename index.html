@@ -48,7 +48,7 @@
     }
     #fs-overlay p {
       color: #555566;
-      font-family: 'Noto Serif KR', serif;
+      font-family: 'NeoDunggeunmoPro', monospace;
       font-size: clamp(13px, 1.5vw, 18px);
       letter-spacing: 4px;
     }
@@ -72,10 +72,16 @@
     body.ingame { cursor: default; }
   </style>
 
-  <!-- Google Fonts (CDN) — 사지방 인터넷 가능 시 사용 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+  <!-- 로컬 도트 폰트 -->
+  <style>
+    @font-face {
+      font-family: 'NeoDunggeunmoPro';
+      src: url('assets/fonts/NeoDunggeunmoPro-Regular.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+      font-display: block;
+    }
+  </style>
 </head>
 <body>
 
@@ -110,16 +116,15 @@
 // ================================================================
 const FontManager = {
   FONTS: [
-    // assets/fonts/ 에 파일 넣고 아래 주석 해제
-    // {
-    //   key:    'NanumMyeongjo',
-    //   family: 'NanumMyeongjo',
-    //   src:    'assets/fonts/NanumMyeongjo.woff2',
-    //   weight: 'normal',
-    //   style:  'normal',
-    // },
+    {
+      key:    'NeoDunggeunmoPro',
+      family: 'NeoDunggeunmoPro',
+      src:    'assets/fonts/NeoDunggeunmoPro-Regular.woff2',
+      weight: 'normal',
+      style:  'normal',
+    },
   ],
-  FALLBACK: "'Noto Serif KR', serif",
+  FALLBACK: "'NeoDunggeunmoPro', monospace",
 
   init() {
     if (this.FONTS.length === 0) return Promise.resolve();
@@ -138,17 +143,15 @@ const FontManager = {
     });
   },
 
-  // Phaser의 fontFamily 값으로 바로 쓸 수 있는 문자열 반환
   get(key) {
     const f = this.FONTS.find(f => f.key === key);
-    return f ? `'${f.family}', ${this.FALLBACK}` : this.FALLBACK;
+    return f ? `'${f.family}', monospace` : this.FALLBACK;
   },
 
-  // 자주 쓰는 폰트 단축 접근자
-  // 폰트 추가 후 여기도 업데이트
-  get TITLE()  { return this.FALLBACK; }, // 타이틀용
-  get BODY()   { return this.FALLBACK; }, // 본문용
-  get MONO()   { return 'monospace';   }, // 시스템/코드용
+  // 단축 접근자 — 모두 NeoDunggeunmoPro 사용
+  get TITLE() { return "'NeoDunggeunmoPro', monospace"; },
+  get BODY()  { return "'NeoDunggeunmoPro', monospace"; },
+  get MONO()  { return "'NeoDunggeunmoPro', monospace"; },
 };
 
 // ================================================================
