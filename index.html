@@ -5,166 +5,464 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PROJECT001</title>
   <style>
+    /* ── 브라우저 기본 UI 전부 제거 ── */
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0a0a;
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #060608;
+      cursor: none; /* 나중에 커스텀 커서로 교체 */
+    }
+
+    #game-container {
+      width: 100vw;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      overflow: hidden;
     }
+
     canvas { display: block; }
+
+    /* ── 전체화면 유도 오버레이 ── */
+    #fs-overlay {
+      position: fixed;
+      inset: 0;
+      background: #060608;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      z-index: 9999;
+      cursor: pointer;
+      transition: opacity 0.4s;
+    }
+    #fs-overlay p {
+      color: #555566;
+      font-family: 'Noto Serif KR', serif;
+      font-size: clamp(13px, 1.5vw, 18px);
+      letter-spacing: 4px;
+    }
+    #fs-overlay .title {
+      color: #c8c4bc;
+      font-size: clamp(28px, 5vw, 56px);
+      letter-spacing: 12px;
+    }
+    #fs-overlay .hint {
+      font-size: clamp(11px, 1.2vw, 14px);
+      color: #333344;
+      letter-spacing: 2px;
+      animation: blink 1.4s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.2; }
+    }
+
+    /* 전체화면 전환 후 커서 복원 (인게임에서 커스텀 커서 적용 예정) */
+    body.ingame { cursor: default; }
   </style>
+
+  <!-- Google Fonts (CDN) — 사지방 인터넷 가능 시 사용 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;600&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-  <!-- Phaser 3 CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+<!-- 전체화면 유도 오버레이 (클릭하면 전체화면 + 게임 시작) -->
+<div id="fs-overlay">
+  <p class="title">공  방</p>
+  <p>PROJECT 001</p>
+  <p class="hint">— 클릭하여 시작 —</p>
+</div>
 
-  <script>
-    // ─────────────────────────────────────────
-    // 씬: 부팅 화면 (BootScene)
-    // ─────────────────────────────────────────
-    class BootScene extends Phaser.Scene {
-      constructor() { super({ key: 'BootScene' }); }
+<div id="game-container"></div>
 
-      preload() {
-        // 로딩 바 배경
-        const width = this.scale.width;
-        const height = this.scale.height;
+<!-- Phaser 3 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 
-        const progressBar = this.add.graphics();
-        const progressBox = this.add.graphics();
-        progressBox.fillStyle(0x1a1a1a, 1);
-        progressBox.fillRect(width / 2 - 160, height / 2 - 15, 320, 30);
+<!-- ================================================================
+  로드 순서 (의존성 순)
+  나중에 파일 분리 시 아래 순서대로 <script src="..."> 로 교체
+  또는 ES Module 방식으로 main.js 하나만 남김
 
-        this.load.on('progress', (value) => {
-          progressBar.clear();
-          progressBar.fillStyle(0xcccccc, 1);
-          progressBar.fillRect(width / 2 - 155, height / 2 - 10, 310 * value, 20);
-        });
+  1. core/FontManager.js
+  2. core/SaveManager.js
+  3. scenes/LobbyScene.js
+  4. scenes/LoadingScene.js
+  5. scenes/GameScene.js
+  6. main.js  ← Phaser.Game() 실행
+================================================================ -->
 
-        this.load.on('complete', () => {
-          progressBar.destroy();
-          progressBox.destroy();
-        });
+<script>
+// ================================================================
+//  [추후 분리] src/core/FontManager.js
+// ================================================================
+const FontManager = {
+  FONTS: [
+    // assets/fonts/ 에 파일 넣고 아래 주석 해제
+    // {
+    //   key:    'NanumMyeongjo',
+    //   family: 'NanumMyeongjo',
+    //   src:    'assets/fonts/NanumMyeongjo.woff2',
+    //   weight: 'normal',
+    //   style:  'normal',
+    // },
+  ],
+  FALLBACK: "'Noto Serif KR', serif",
 
-        // TODO: 여기에 에셋 로드 추가
-        // this.load.image('key', 'assets/images/file.png');
-      }
+  init() {
+    if (this.FONTS.length === 0) return Promise.resolve();
+    return Promise.all(this.FONTS.map(f => this._loadFont(f)))
+      .then(() => console.log('[FontManager] 폰트 로드 완료'));
+  },
 
-      create() {
-        this.scene.start('MainMenuScene');
-      }
+  _loadFont(font) {
+    return new Promise(resolve => {
+      new FontFace(font.family, `url(${font.src})`, {
+        weight: font.weight || 'normal',
+        style:  font.style  || 'normal',
+      }).load()
+        .then(loaded => { document.fonts.add(loaded); resolve(); })
+        .catch(err   => { console.warn(`[FontManager] 실패: ${font.key}`, err); resolve(); });
+    });
+  },
+
+  // Phaser의 fontFamily 값으로 바로 쓸 수 있는 문자열 반환
+  get(key) {
+    const f = this.FONTS.find(f => f.key === key);
+    return f ? `'${f.family}', ${this.FALLBACK}` : this.FALLBACK;
+  },
+
+  // 자주 쓰는 폰트 단축 접근자
+  // 폰트 추가 후 여기도 업데이트
+  get TITLE()  { return this.FALLBACK; }, // 타이틀용
+  get BODY()   { return this.FALLBACK; }, // 본문용
+  get MONO()   { return 'monospace';   }, // 시스템/코드용
+};
+
+// ================================================================
+//  [추후 분리] src/core/SaveManager.js
+// ================================================================
+const SaveManager = {
+  SAVE_KEY: 'project001_save',
+  hasSave()       { return localStorage.getItem(this.SAVE_KEY) !== null; },
+  save(data)      { localStorage.setItem(this.SAVE_KEY, JSON.stringify(data)); },
+  load()          { const r = localStorage.getItem(this.SAVE_KEY); return r ? JSON.parse(r) : null; },
+  deleteSave()    { localStorage.removeItem(this.SAVE_KEY); },
+};
+
+// ================================================================
+//  유틸: 해상도 비례 폰트 크기
+//  어느 씬에서도 쓸 수 있도록 전역 함수로
+// ================================================================
+function scaledFontSize(basePx, sceneScale) {
+  const s = sceneScale || { width: window.innerWidth, height: window.innerHeight };
+  const ratio = Math.min(s.width / 1280, s.height / 720);
+  return `${Math.round(basePx * Math.max(ratio, 0.55))}px`;
+}
+
+// ================================================================
+//  [추후 분리] src/scenes/LobbyScene.js
+// ================================================================
+class LobbyScene extends Phaser.Scene {
+  constructor() { super({ key: 'LobbyScene' }); }
+
+  create() {
+    const W  = this.scale.width;
+    const H  = this.scale.height;
+    const cx = W / 2;
+
+    this._buildBackground(W, H, cx);
+    this._buildTitle(W, H, cx);
+    this._buildMenu(W, H);
+    this._buildFooter(W, H);
+  }
+
+  _buildBackground(W, H, cx) {
+    this.add.rectangle(0, 0, W, H, 0x060608).setOrigin(0);
+
+    // 격자
+    const grid = this.add.graphics();
+    grid.lineStyle(1, 0x0d0d12, 1);
+    const step = Math.round(W / 48);
+    for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
+    for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
+
+    // 중앙 글로우
+    const glow = this.add.graphics();
+    for (let i = 5; i > 0; i--) {
+      glow.fillStyle(0x7777aa, 0.015 * i);
+      glow.fillCircle(cx, H * 0.42, Math.min(W, H) * 0.1 * i);
     }
 
-    // ─────────────────────────────────────────
-    // 씬: 메인 메뉴 (MainMenuScene)
-    // ─────────────────────────────────────────
-    class MainMenuScene extends Phaser.Scene {
-      constructor() { super({ key: 'MainMenuScene' }); }
+    // 하단 구분선
+    const deco = this.add.graphics();
+    const ly = H * 0.80;
+    deco.lineStyle(1, 0x222230, 1);
+    deco.lineBetween(W * 0.04, ly, W * 0.42, ly);
+    deco.lineBetween(W * 0.58, ly, W * 0.96, ly);
+  }
 
-      create() {
-        const { width, height } = this.scale;
+  _buildTitle(W, H, cx) {
+    const sub = this.add.text(cx, H * 0.26, 'P  R  O  J  E  C  T  0  0  1', {
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#2a2a3a',
+      fontFamily: FontManager.MONO,
+      letterSpacing: 4,
+    }).setOrigin(0.5).setAlpha(0);
 
-        // 배경
-        this.add.rectangle(0, 0, width, height, 0x0a0a0a).setOrigin(0);
+    const title = this.add.text(cx, H * 0.38, '공  방', {
+      fontSize: scaledFontSize(76, this.scale),
+      fill: '#ddd8cc',
+      fontFamily: FontManager.TITLE,
+    }).setOrigin(0.5).setAlpha(0);
 
-        // 타이틀
-        this.add.text(width / 2, height / 2 - 80, 'PROJECT001', {
-          fontSize: '48px',
-          fill: '#ffffff',
-          fontFamily: 'monospace',
-          letterSpacing: 8
-        }).setOrigin(0.5);
+    const kanji = this.add.text(cx, H * 0.53, '工  房', {
+      fontSize: scaledFontSize(13, this.scale),
+      fill: '#252530',
+      fontFamily: FontManager.MONO,
+      letterSpacing: 8,
+    }).setOrigin(0.5).setAlpha(0);
 
-        // 서브타이틀
-        this.add.text(width / 2, height / 2 - 30, '──────────────', {
-          fontSize: '16px',
-          fill: '#444444',
-          fontFamily: 'monospace'
-        }).setOrigin(0.5);
+    this.tweens.add({ targets: sub,   alpha: 1, duration: 1000, delay: 300,  ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: title, alpha: 1, duration: 1400, delay: 600,  ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: kanji, alpha: 1, duration: 1000, delay: 1000, ease: 'Sine.easeOut' });
+  }
 
-        // 시작 버튼
-        const startText = this.add.text(width / 2, height / 2 + 40, '[ 시작 ]', {
-          fontSize: '24px',
-          fill: '#aaaaaa',
-          fontFamily: 'monospace'
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+  _buildMenu(W, H) {
+    const hasSave = SaveManager.hasSave();
+    const x     = W * 0.07;
+    const baseY = H * 0.70;
+    const gap   = parseInt(scaledFontSize(42, this.scale));
 
-        // 호버 효과
-        startText.on('pointerover', () => startText.setStyle({ fill: '#ffffff' }));
-        startText.on('pointerout', () => startText.setStyle({ fill: '#aaaaaa' }));
-        startText.on('pointerdown', () => {
-          this.scene.start('GameScene');
-        });
+    const items = hasSave
+      ? [
+          { label: '새로 시작하기', key: 'new',      delay: 900  },
+          { label: '불러오기',      key: 'load',     delay: 1050 },
+          { label: '설  정',        key: 'settings', delay: 1200 },
+          { label: '나가기',        key: 'quit',     delay: 1350 },
+        ]
+      : [
+          { label: '시  작',        key: 'new',      delay: 900  },
+          { label: '설  정',        key: 'settings', delay: 1050 },
+          { label: '나가기',        key: 'quit',     delay: 1200 },
+        ];
 
-        // 깜빡임 애니메이션
-        this.tweens.add({
-          targets: startText,
-          alpha: 0.3,
-          duration: 900,
-          yoyo: true,
-          repeat: -1,
-          ease: 'Sine.easeInOut'
-        });
-      }
+    items.forEach((item, i) => {
+      this._makeMenuButton(item.label, x, baseY + gap * i, item.key, item.delay);
+    });
+  }
+
+  _makeMenuButton(label, x, y, key, delay) {
+    const marker = this.add.text(x - parseInt(scaledFontSize(16, this.scale)), y, '│', {
+      fontSize: scaledFontSize(14, this.scale),
+      fill: '#2a2a3a',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0, 0.5).setAlpha(0);
+
+    const btn = this.add.text(x, y, label, {
+      fontSize: scaledFontSize(19, this.scale),
+      fill: '#666677',
+      fontFamily: FontManager.TITLE,
+    }).setOrigin(0, 0.5).setAlpha(0).setInteractive({ useHandCursor: true });
+
+    const underline = this.add.graphics().setAlpha(0);
+
+    // 페이드인
+    this.tweens.add({ targets: [btn, marker, underline], alpha: 1, duration: 500, delay, ease: 'Sine.easeOut' });
+
+    const origX = x;
+
+    btn.on('pointerover', () => {
+      this.tweens.add({ targets: btn, x: origX + parseInt(scaledFontSize(8, this.scale)), duration: 100, ease: 'Sine.easeOut' });
+      btn.setStyle({ fill: '#d4cfc6' });
+      marker.setStyle({ fill: '#886655' });
+      underline.clear();
+      underline.lineStyle(1, 0x554433, 0.7);
+      underline.lineBetween(x, y + parseInt(scaledFontSize(14, this.scale)), x + btn.width + parseInt(scaledFontSize(8, this.scale)), y + parseInt(scaledFontSize(14, this.scale)));
+    });
+
+    btn.on('pointerout', () => {
+      this.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' });
+      btn.setStyle({ fill: '#666677' });
+      marker.setStyle({ fill: '#2a2a3a' });
+      underline.clear();
+    });
+
+    btn.on('pointerdown', () => this._onMenuClick(key));
+  }
+
+  _onMenuClick(key) {
+    switch (key) {
+      case 'new':
+        this._transition(() => this.scene.start('LoadingScene', { next: 'GameScene' }));
+        break;
+      case 'load':
+        if (SaveManager.hasSave())
+          this._transition(() => this.scene.start('LoadingScene', { next: 'GameScene', save: SaveManager.load() }));
+        break;
+      case 'settings':
+        // TODO: SettingsScene 또는 오버레이
+        console.log('[Lobby] 설정 — 미구현');
+        break;
+      case 'quit':
+        window.close();
+        break;
     }
+  }
 
-    // ─────────────────────────────────────────
-    // 씬: 게임 (GameScene) — 프로토타입
-    // ─────────────────────────────────────────
-    class GameScene extends Phaser.Scene {
-      constructor() { super({ key: 'GameScene' }); }
+  _transition(callback) {
+    const flash = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x060608, 0)
+      .setOrigin(0).setDepth(999);
+    this.tweens.add({
+      targets: flash, alpha: 1, duration: 350, ease: 'Sine.easeIn',
+      onComplete: callback,
+    });
+  }
 
-      create() {
-        const { width, height } = this.scale;
+  _buildFooter(W, H) {
+    this.add.text(W - 14, H - 12, 'v0.0.1  prototype', {
+      fontSize: scaledFontSize(10, this.scale),
+      fill: '#1c1c24',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(1, 1);
+  }
+}
 
-        this.add.rectangle(0, 0, width, height, 0x0d0d0d).setOrigin(0);
+// ================================================================
+//  [추후 분리] src/scenes/LoadingScene.js
+// ================================================================
+class LoadingScene extends Phaser.Scene {
+  constructor() { super({ key: 'LoadingScene' }); }
 
-        this.add.text(width / 2, height / 2 - 20, '[ PROTOTYPE ]', {
-          fontSize: '20px',
-          fill: '#666666',
-          fontFamily: 'monospace'
-        }).setOrigin(0.5);
+  init(data) {
+    this.nextScene = data.next || 'LobbyScene';
+    this.saveData  = data.save || null;
+  }
 
-        this.add.text(width / 2, height / 2 + 20, '게임 씬 개발 중...', {
-          fontSize: '14px',
-          fill: '#444444',
-          fontFamily: 'monospace'
-        }).setOrigin(0.5);
+  create() {
+    const W = this.scale.width, H = this.scale.height;
+    this.add.rectangle(0, 0, W, H, 0x060608).setOrigin(0);
 
-        // ESC로 메인메뉴 복귀
-        this.input.keyboard.on('keydown-ESC', () => {
-          this.scene.start('MainMenuScene');
-        });
+    // 로딩 도트 애니메이션
+    const dot = this.add.text(W / 2, H / 2, '·', {
+      fontSize: scaledFontSize(32, this.scale),
+      fill: '#333344',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0.5);
 
-        this.add.text(width / 2, height - 30, 'ESC — 메인 메뉴로', {
-          fontSize: '12px',
-          fill: '#333333',
-          fontFamily: 'monospace'
-        }).setOrigin(0.5);
-      }
-    }
+    let count = 0;
+    const dots = ['·', '· ·', '· · ·'];
+    this.time.addEvent({
+      delay: 300, repeat: 8,
+      callback: () => { dot.setText(dots[count % 3]); count++; },
+    });
 
-    // ─────────────────────────────────────────
-    // Phaser 게임 설정
-    // ─────────────────────────────────────────
-    const config = {
+    this.time.delayedCall(1200, () => {
+      this.scene.start(this.nextScene, { save: this.saveData });
+    });
+  }
+}
+
+// ================================================================
+//  [추후 분리] src/scenes/GameScene.js
+//  인게임 플레이스홀더 — 추후 장르 확정 후 구현
+// ================================================================
+class GameScene extends Phaser.Scene {
+  constructor() { super({ key: 'GameScene' }); }
+
+  init(data) {
+    this.saveData = data.save || null;
+  }
+
+  create() {
+    const W = this.scale.width, H = this.scale.height;
+    this.add.rectangle(0, 0, W, H, 0x060608).setOrigin(0);
+
+    this.add.text(W / 2, H / 2 - 20, '[ INGAME ]', {
+      fontSize: scaledFontSize(20, this.scale),
+      fill: '#222233',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0.5);
+
+    this.add.text(W / 2, H / 2 + 20, '개발 중 —', {
+      fontSize: scaledFontSize(13, this.scale),
+      fill: '#1a1a28',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0.5);
+
+    this.add.text(W / 2, H - 28, 'ESC  →  로비로', {
+      fontSize: scaledFontSize(11, this.scale),
+      fill: '#1c1c24',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0.5);
+
+    this.input.keyboard.on('keydown-ESC', () => {
+      this.scene.start('LobbyScene');
+    });
+  }
+}
+
+// ================================================================
+//  [추후 분리] src/main.js
+//  Phaser 게임 초기화 + 전체화면 처리
+// ================================================================
+
+// ── 전체화면 유도 오버레이 ───────────────────────────────────────
+const fsOverlay = document.getElementById('fs-overlay');
+
+function startGame() {
+  // 전체화면 요청 (브라우저 정책: 사용자 제스처 필요)
+  const el = document.documentElement;
+  if (el.requestFullscreen)            el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+  else if (el.mozRequestFullScreen)    el.mozRequestFullScreen();
+
+  // 오버레이 제거
+  fsOverlay.style.opacity = '0';
+  setTimeout(() => fsOverlay.remove(), 400);
+
+  // 폰트 로드 후 Phaser 시작
+  FontManager.init().then(() => {
+    const game = new Phaser.Game({
       type: Phaser.AUTO,
-      width: 1280,
-      height: 720,
-      backgroundColor: '#0a0a0a',
-      scene: [BootScene, MainMenuScene, GameScene],
+      backgroundColor: '#060608',
+      parent: 'game-container',
+      scene: [LobbyScene, LoadingScene, GameScene],
       scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH
+        mode: Phaser.Scale.RESIZE,        // 모든 해상도 자동 대응
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width:  window.innerWidth,
+        height: window.innerHeight,
+      },
+    });
+
+    // 창 리사이즈 대응
+    window.addEventListener('resize', () => {
+      game.scale.resize(window.innerWidth, window.innerHeight);
+    });
+
+    // F11 / 전체화면 토글 단축키
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen?.();
+        } else {
+          document.exitFullscreen?.();
+        }
       }
-    };
+    });
+  });
+}
 
-    const game = new Phaser.Game(config);
-  </script>
-
+// 오버레이 클릭 → 게임 시작
+fsOverlay.addEventListener('click', startGame, { once: true });
+</script>
 </body>
 </html>
