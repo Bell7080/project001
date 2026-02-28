@@ -13,18 +13,24 @@
       height: 100%;
       overflow: hidden;
       background: #060608;
-      cursor: none; /* 나중에 커스텀 커서로 교체 */
+      /* 텍스트 선택 차단 */
+      user-select: none;
+      -webkit-user-select: none;
     }
 
     #game-container {
       width: 100vw;
       height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      position: relative;
     }
 
-    canvas { display: block; }
+    canvas {
+      display: block;
+      /* 캔버스 위치 고정 — 전체화면 전환 후 밀리는 현상 방지 */
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
 
     /* ── 전체화면 유도 오버레이 ── */
     #fs-overlay {
@@ -417,49 +423,71 @@ class GameScene extends Phaser.Scene {
 const fsOverlay = document.getElementById('fs-overlay');
 
 function startGame() {
-  // 전체화면 요청 (브라우저 정책: 사용자 제스처 필요)
   const el = document.documentElement;
-  if (el.requestFullscreen)            el.requestFullscreen();
-  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-  else if (el.mozRequestFullScreen)    el.mozRequestFullScreen();
+  const fsRequest = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
 
-  // 오버레이 제거
+  // 전체화면 요청 — Promise 반환. 거부돼도 게임은 시작
+  const fsPromise = fsRequest ? fsRequest.call(el).catch(() => {}) : Promise.resolve();
+
+  // 오버레이 페이드아웃
   fsOverlay.style.opacity = '0';
   setTimeout(() => fsOverlay.remove(), 400);
 
-  // 폰트 로드 후 Phaser 시작
-  FontManager.init().then(() => {
-    const game = new Phaser.Game({
-      type: Phaser.AUTO,
-      backgroundColor: '#060608',
-      parent: 'game-container',
-      scene: [LobbyScene, LoadingScene, GameScene],
-      scale: {
-        mode: Phaser.Scale.RESIZE,        // 모든 해상도 자동 대응
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width:  window.innerWidth,
-        height: window.innerHeight,
-      },
-    });
+  // 전체화면 완료 후 → 폰트 로드 → Phaser 시작
+  fsPromise.finally(() => {
+    FontManager.init().then(() => {
+      const game = new Phaser.Game({
+        type: Phaser.AUTO,
+        backgroundColor: '#060608',
+        parent: 'game-container',
+        scene: [LobbyScene, LoadingScene, GameScene],
+        scale: {
+          mode: Phaser.Scale.RESIZE,
+          autoCenter: Phaser.Scale.CENTER_BOTH,
+          width:  window.innerWidth,
+          height: window.innerHeight,
+        },
+      });
 
-    // 창 리사이즈 대응
-    window.addEventListener('resize', () => {
-      game.scale.resize(window.innerWidth, window.innerHeight);
-    });
+      // 전역 참조 — fullscreenchange 핸들러에서 사용
+      window._phaserGame = game;
 
-    // F11 / 전체화면 토글 단축키
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'F11') {
-        e.preventDefault();
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen?.();
-        } else {
-          document.exitFullscreen?.();
+      // 리사이즈 대응 (전체화면 해제 포함)
+      window.addEventListener('resize', () => {
+        game.scale.resize(window.innerWidth, window.innerHeight);
+      });
+
+      // F11 전체화면 토글
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'F11') {
+          e.preventDefault();
+          if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+          else                             document.exitFullscreen?.();
         }
-      }
+      });
     });
   });
 }
+
+// ── 게임답게 — 브라우저 기본 동작 전부 차단 ────────────────────
+
+// 우클릭 컨텍스트 메뉴 차단
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+// 드래그 차단
+document.addEventListener('dragstart', e => e.preventDefault());
+
+// 중간 버튼(휠 클릭) 새 탭 열기 차단
+document.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
+
+// 전체화면 전환 시 캔버스 크기 강제 재동기화
+document.addEventListener('fullscreenchange', () => {
+  setTimeout(() => {
+    if (window._phaserGame) {
+      window._phaserGame.scale.resize(window.innerWidth, window.innerHeight);
+    }
+  }, 100); // 전체화면 전환 완료 후 약간 딜레이
+});
 
 // 오버레이 클릭 → 게임 시작
 fsOverlay.addEventListener('click', startGame, { once: true });
