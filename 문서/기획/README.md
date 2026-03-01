@@ -22,10 +22,15 @@ project001/
 │   └── 개발/                       # 개발 기록
 │       └── 개발 일지.md             # 날짜별 작업 기록
 │
-├── 🎮 Games/                       # 게임 소스코드 (Phaser 3)
-│   └── Codes/
+├── 🎮 Games/                       # 게임 소스코드 + 리소스
+│   │
+│   ├── Assets/                     # 리소스
+│   │   └── Fonts/                  # 폰트 파일
+│   │       └── NeoDunggeunmoPro-Regular.woff2
+│   │
+│   └── Codes/                      # 소스코드 (Phaser 3)
 │       ├── Managers/               # 핵심 매니저 클래스
-│       │   ├── FontManager.js      # 폰트 관리
+│       │   ├── FontManager.js      # 폰트 관리 + 전환
 │       │   ├── SaveManager.js      # 세이브 데이터 관리
 │       │   └── utils.js            # 전역 유틸 함수
 │       │
@@ -39,21 +44,7 @@ project001/
 │       ├── Systems/                # 전투 · 로그라이크 · 스토리 시스템 (추후)
 │       └── UI/                     # UI 컴포넌트 (추후)
 │
-├── 📦 data/                        # JSON 데이터 (유니티 이식 시 재활용)
-│   ├── characters/
-│   ├── items/
-│   ├── events/
-│   └── story/
-│
-├── 🖼️ assets/                      # 리소스
-│   ├── images/
-│   ├── audio/
-│   └── fonts/
-│
-├── 🧪 prototype/                   # 빠른 테스트용 독립 HTML 파일
-│
-├── index.html                      # 게임 진입점 (Codespaces · GitHub Pages)
-└── README.md                       # 루트 진입점 (문서/기획/README.md 와 동기화)
+└── index.html                      # 게임 진입점 (Codespaces · GitHub Pages)
 ```
 
 ---
