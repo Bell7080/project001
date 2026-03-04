@@ -2,8 +2,8 @@
 //  SettingsScene.js
 //  경로: Games/Codes/Scenes/SettingsScene.js
 //
-//  역할: 설정 화면 — 폰트 / 비디오 / 저장 탭
-//  의존: FontManager, SaveManager, utils.js
+//  역할: 설정 화면 — 폰트 / 비디오 / 키 설정 / 저장 탭
+//  의존: FontManager, SaveManager, InputManager, utils.js
 // ================================================================
 
 class SettingsScene extends Phaser.Scene {
@@ -19,37 +19,36 @@ class SettingsScene extends Phaser.Scene {
     const H  = this.scale.height;
     const cx = W / 2;
 
+    // InputManager 씬 재등록 (키 오브젝트 갱신)
+    InputManager.reinit(this);
+
     this._buildBackground(W, H);
     this._buildTitle(W, H, cx);
     this._buildTabs(W, H, cx);
     this._buildBackButton(W, H);
 
-    // 전체화면 해제(ESC 등) 감지 → 비디오 탭 상태 동기화용
     this._fsHandler = () => {
       if (this._activeTab === 'video') {
         this._removeInputEl();
         this.scene.restart({ from: this.fromScene, tab: 'video' });
       }
     };
-    document.addEventListener('fullscreenchange', this._fsHandler);
+    document.addEventListener('fullscreenchange',       this._fsHandler);
     document.addEventListener('webkitfullscreenchange', this._fsHandler);
   }
 
-  // ── 씬 종료 시 정리 ──────────────────────────────────────────
   shutdown() {
     this._removeInputEl();
+    // 리바인딩 중이면 취소
+    if (InputManager._rebindListener) InputManager._cancelRebind();
     if (this._fsHandler) {
-      document.removeEventListener('fullscreenchange', this._fsHandler);
+      document.removeEventListener('fullscreenchange',       this._fsHandler);
       document.removeEventListener('webkitfullscreenchange', this._fsHandler);
     }
   }
 
   _removeInputEl() {
-    // DOM input 대신 Phaser 텍스트 사용 — 커서 타이머만 정리
-    if (this._cursorTimer) {
-      this._cursorTimer.remove();
-      this._cursorTimer = null;
-    }
+    if (this._cursorTimer) { this._cursorTimer.remove(); this._cursorTimer = null; }
     this._inputEl = null;
   }
 
@@ -78,14 +77,16 @@ class SettingsScene extends Phaser.Scene {
     const tabW   = W * 0.14;
     const tabH   = parseInt(scaledFontSize(36, this.scale));
     const gap    = W * 0.015;
-    const totalW = tabW * 3 + gap * 2;
-    const startX = cx - totalW / 2;
 
     const tabs = [
-      { key: 'font',  label: '폰트'  },
-      { key: 'video', label: '비디오' },
-      { key: 'save',  label: '저장'  },
+      { key: 'font',  label: '폰트'   },
+      { key: 'video', label: '비디오'  },
+      { key: 'keys',  label: '키 설정' },
+      { key: 'save',  label: '저장'   },
     ];
+
+    const totalW = tabW * tabs.length + gap * (tabs.length - 1);
+    const startX = cx - totalW / 2;
 
     tabs.forEach((tab, i) => {
       const tx       = startX + i * (tabW + gap);
@@ -94,7 +95,7 @@ class SettingsScene extends Phaser.Scene {
       this._drawTabBg(bg, tx, tabY, tabW, tabH, selected);
 
       this.add.text(tx + tabW / 2, tabY + tabH / 2, tab.label, {
-        fontSize: scaledFontSize(13, this.scale),
+        fontSize: scaledFontSize(12, this.scale),
         fill: selected ? '#d4cfc6' : '#555566',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0.5);
@@ -110,6 +111,7 @@ class SettingsScene extends Phaser.Scene {
       });
       hit.on('pointerdown', () => {
         if (this._activeTab === tab.key) return;
+        if (InputManager._rebindListener) InputManager._cancelRebind();
         this._removeInputEl();
         this.scene.restart({ from: this.fromScene, tab: tab.key });
       });
@@ -121,6 +123,7 @@ class SettingsScene extends Phaser.Scene {
 
     if (this._activeTab === 'font')  this._buildFontTab(W, H, cx);
     if (this._activeTab === 'video') this._buildVideoTab(W, H, cx);
+    if (this._activeTab === 'keys')  this._buildKeysTab(W, H, cx);
     if (this._activeTab === 'save')  this._buildSaveTab(W, H, cx);
   }
 
@@ -147,7 +150,7 @@ class SettingsScene extends Phaser.Scene {
     this._currentFont = saved;
 
     const options = [
-      { key: 'game',   label: 'NeoDunggeunmoPro', desc: '게임 전용 도트 폰트',     family: "'NeoDunggeunmoPro', monospace" },
+      { key: 'game',   label: 'NeoDunggeunmoPro', desc: '게임 전용 도트 폰트',      family: "'NeoDunggeunmoPro', monospace" },
       { key: 'system', label: 'System Default',   desc: '브라우저 기본 시스템 폰트', family: 'Arial, sans-serif' },
     ];
 
@@ -241,9 +244,14 @@ class SettingsScene extends Phaser.Scene {
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
+    // ── Electron 안내 ─────────────────────────────────────────
+    // Electron 이식 후: requestFullscreen / exitFullscreen 대신
+    // win.setFullScreen(true/false) 로 교체.
+    // 아래 옵션 UI 구조는 그대로 유지됨.
+
     const options = [
       { key: 'fullscreen', label: '전체화면', desc: 'F11 또는 이 항목으로 전환' },
-      { key: 'windowed',   label: '창  모  드', desc: 'ESC로도 전환 가능' },
+      { key: 'windowed',   label: '창  모  드', desc: '창 모드로 전환' },
     ];
 
     const baseY = H * 0.42;
@@ -251,9 +259,7 @@ class SettingsScene extends Phaser.Scene {
 
     options.forEach((opt, i) => {
       const y          = baseY + gap * i;
-      const isSelected = isFullscreen
-        ? opt.key === 'fullscreen'
-        : opt.key === 'windowed';
+      const isSelected = isFullscreen ? opt.key === 'fullscreen' : opt.key === 'windowed';
 
       const box = this.add.graphics();
       this._drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, isSelected);
@@ -294,7 +300,6 @@ class SettingsScene extends Phaser.Scene {
       hit.on('pointerdown', () => {
         if (isSelected) return;
         if (opt.key === 'fullscreen') {
-          // fullscreenchange 이벤트가 씬 재시작을 처리
           document.documentElement.requestFullscreen?.().catch(() => {});
         } else {
           document.exitFullscreen?.().catch(() => {});
@@ -302,8 +307,7 @@ class SettingsScene extends Phaser.Scene {
       });
     });
 
-    // 안내 텍스트
-    this.add.text(cx, H * 0.72, 'ESC 키로도 전체화면을 해제할 수 있습니다', {
+    this.add.text(cx, H * 0.72, 'F11 키로도 전체화면을 전환할 수 있습니다', {
       fontSize: scaledFontSize(11, this.scale),
       fill: '#333344',
       fontFamily: FontManager.MONO,
@@ -311,18 +315,163 @@ class SettingsScene extends Phaser.Scene {
   }
 
   // ══════════════════════════════════════════════════════════════
+  //  키 설정 탭
+  // ══════════════════════════════════════════════════════════════
+  _buildKeysTab(W, H, cx) {
+    const actions   = InputManager.ACTIONS;
+    const colCount  = 2;
+    const startY    = H * 0.30;
+    const rowH      = H * 0.072;
+    const colW      = W * 0.42;
+    const leftX     = W * 0.06;
+    const rightX    = W * 0.52;
+
+    // 섹션 헤더
+    this.add.text(leftX, H * 0.26, '[ 키 설정 ]', {
+      fontSize: scaledFontSize(13, this.scale),
+      fill: '#444455',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0, 0.5);
+
+    this.add.text(W - leftX, H * 0.26, 'ESC — 변경 취소', {
+      fontSize: scaledFontSize(10, this.scale),
+      fill: '#2a2a3a',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(1, 0.5);
+
+    // 리바인딩 중 오버레이 텍스트 (나중에 표시용)
+    const waitText = this.add.text(cx, H * 0.88, '', {
+      fontSize: scaledFontSize(13, this.scale),
+      fill: '#886655',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0.5).setDepth(50);
+
+    // 각 액션 행 렌더
+    const rowObjects = []; // 나중에 rebind 후 갱신하기 위해
+
+    actions.forEach((action, i) => {
+      const col  = i % colCount;
+      const row  = Math.floor(i / colCount);
+      const baseX = col === 0 ? leftX : rightX;
+      const y     = startY + row * rowH;
+
+      const obj = this._makeKeyRow(action, baseX, y, colW, rowH, waitText, cx, H, rowObjects, i);
+      rowObjects.push(obj);
+    });
+
+    // 기본값 초기화 버튼
+    const resetY = startY + Math.ceil(actions.length / colCount) * rowH + H * 0.04;
+    this._makeButton(cx, resetY, W * 0.22, 32, '기본값으로 초기화', () => {
+      this._showConfirmPopup(cx, H, '키 설정을 기본값으로 되돌리겠습니까?', () => {
+        InputManager.resetToDefaults();
+        this._showToast(cx, H * 0.5, '초기화 완료', () => {
+          this.scene.restart({ from: this.fromScene, tab: 'keys' });
+        });
+      });
+    }, false);
+  }
+
+  _makeKeyRow(action, baseX, y, colW, rowH, waitText, cx, H, rowObjects, idx) {
+    const labelX  = baseX + colW * 0.04;
+    const keyBtnX = baseX + colW * 0.72;
+    const keyBtnW = colW * 0.26;
+    const rowPad  = 6;
+
+    // 행 배경
+    const rowBg = this.add.graphics();
+    const drawRowBg = (hover) => {
+      rowBg.clear();
+      rowBg.fillStyle(hover ? 0x0e0e14 : 0x000000, hover ? 1 : 0);
+      rowBg.lineStyle(1, 0x1a1a22, 0.4);
+      rowBg.fillRect(baseX, y - rowH / 2 + rowPad, colW, rowH - rowPad * 2);
+      rowBg.strokeRect(baseX, y - rowH / 2 + rowPad, colW, rowH - rowPad * 2);
+    };
+    drawRowBg(false);
+
+    // 액션 라벨
+    this.add.text(labelX, y, action.label, {
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#777788',
+      fontFamily: FontManager.BODY,
+    }).setOrigin(0, 0.5);
+
+    // 키 버튼 박스
+    const keyBg = this.add.graphics();
+    const keyText = this.add.text(keyBtnX, y, InputManager.displayName(action.key), {
+      fontSize: scaledFontSize(12, this.scale),
+      fill: '#aaaacc',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0.5);
+
+    const drawKeyBg = (state) => {
+      // state: 'normal' | 'hover' | 'waiting'
+      keyBg.clear();
+      const colors = {
+        normal:  { fill: 0x111120, line: 0x333355 },
+        hover:   { fill: 0x1a1a30, line: 0x5555aa },
+        waiting: { fill: 0x1a1200, line: 0x886622 },
+      };
+      const c = colors[state] || colors.normal;
+      keyBg.fillStyle(c.fill, 1);
+      keyBg.lineStyle(1, c.line, 0.9);
+      keyBg.fillRect(keyBtnX - keyBtnW / 2, y - 13, keyBtnW, 26);
+      keyBg.strokeRect(keyBtnX - keyBtnW / 2, y - 13, keyBtnW, 26);
+    };
+    drawKeyBg('normal');
+
+    // 히트 영역
+    const hit = this.add.rectangle(baseX + colW / 2, y, colW, rowH - rowPad * 2, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+
+    let isWaiting = false;
+
+    hit.on('pointerover', () => {
+      if (!isWaiting) { drawRowBg(true); drawKeyBg('hover'); }
+    });
+    hit.on('pointerout', () => {
+      if (!isWaiting) { drawRowBg(false); drawKeyBg('normal'); }
+    });
+    hit.on('pointerdown', () => {
+      if (InputManager._rebindTarget) return; // 다른 리바인딩 진행 중
+
+      isWaiting = true;
+      drawRowBg(false);
+      drawKeyBg('waiting');
+      keyText.setText('?').setStyle({ fill: '#cc9944' });
+      waitText.setText(`'${action.label}' — 새 키를 누르세요  (ESC: 취소)`);
+
+      InputManager.startRebind(action.key, (newKey) => {
+        isWaiting = false;
+        if (newKey) {
+          keyText.setText(InputManager.displayName(action.key)).setStyle({ fill: '#aaaacc' });
+          // 다른 행도 갱신 (중복 제거로 바뀐 키가 있을 수 있음)
+          rowObjects.forEach((obj, i2) => {
+            if (obj && obj.keyText && obj.actionKey) {
+              obj.keyText.setText(InputManager.displayName(obj.actionKey));
+            }
+          });
+        } else {
+          keyText.setText(InputManager.displayName(action.key)).setStyle({ fill: '#aaaacc' });
+        }
+        drawRowBg(false);
+        drawKeyBg('normal');
+        waitText.setText('');
+      });
+    });
+
+    return { keyText, actionKey: action.key };
+  }
+
+  // ══════════════════════════════════════════════════════════════
   //  저장 탭
   // ══════════════════════════════════════════════════════════════
   _buildSaveTab(W, H, cx) {
-    const startY  = H * 0.30;
-    const boxX    = W * 0.08;
-    const boxW    = W * 0.76;   // 복사 버튼 공간 확보
-    const btnW    = W * 0.10;
-    const btnX    = boxX + boxW + (W * 0.92 - boxX - boxW) / 2 + boxX * 0;
-    // 오른쪽 여백 중앙에 버튼
+    const startY    = H * 0.30;
+    const boxX      = W * 0.08;
+    const boxW      = W * 0.76;
+    const btnW      = W * 0.10;
     const rightBtnX = boxX + boxW + (W * 0.92 - (boxX + boxW)) / 2;
 
-    // ── 내보내기 ──────────────────────────────────────────────
     this.add.text(boxX, startY, '[ 내 저장 코드 ]', {
       fontSize: scaledFontSize(13, this.scale),
       fill: '#444455',
@@ -334,9 +483,8 @@ class SettingsScene extends Phaser.Scene {
     const exportPayload = { game: gameData, settings: settingsData };
     const exportCode    = btoa(unescape(encodeURIComponent(JSON.stringify(exportPayload))));
 
-    // 코드 박스 (복사 버튼과 같은 줄, 높이 통일)
-    const rowH  = 40;
-    const rowY  = startY + 18;
+    const rowH = 40;
+    const rowY = startY + 18;
 
     const codeBox = this.add.graphics();
     codeBox.fillStyle(0x0d0d12, 1);
@@ -344,17 +492,13 @@ class SettingsScene extends Phaser.Scene {
     codeBox.strokeRect(boxX, rowY, boxW, rowH);
     codeBox.fillRect(boxX, rowY, boxW, rowH);
 
-    const displayCode = exportCode.length > 55
-      ? exportCode.substring(0, 55) + '…'
-      : exportCode;
-
+    const displayCode = exportCode.length > 55 ? exportCode.substring(0, 55) + '…' : exportCode;
     this.add.text(boxX + 10, rowY + rowH / 2, displayCode, {
       fontSize: scaledFontSize(10, this.scale),
       fill: '#666688',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    // 복사 버튼 — 코드 박스 오른쪽 같은 줄
     this._makeButton(rightBtnX, rowY + rowH / 2, btnW, rowH, '복사', () => {
       navigator.clipboard?.writeText(exportCode)
         .then(()  => this._showToast(cx, H * 0.5, '복사 완료'))
@@ -362,7 +506,8 @@ class SettingsScene extends Phaser.Scene {
     });
 
     // ── 불러오기 ──────────────────────────────────────────────
-    const loadY = startY + H * 0.20;
+    const loadY  = startY + H * 0.20;
+    const inputY = loadY + 18;
 
     this.add.text(boxX, loadY, '[ 저장 코드로 불러오기 ]', {
       fontSize: scaledFontSize(13, this.scale),
@@ -370,16 +515,12 @@ class SettingsScene extends Phaser.Scene {
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    const inputY = loadY + 18;
-
-    // 입력란 배경
     const inputBg = this.add.graphics();
     inputBg.fillStyle(0x0d0d12, 1);
     inputBg.lineStyle(1, 0x222233, 0.8);
     inputBg.strokeRect(boxX, inputY, boxW, rowH);
     inputBg.fillRect(boxX, inputY, boxW, rowH);
 
-    // Phaser 텍스트 입력 구현 (DOM input 대신 — depth 제어 가능)
     let inputValue = '';
     const placeholder = '여기에 저장 코드를 입력하세요…';
 
@@ -417,7 +558,6 @@ class SettingsScene extends Phaser.Scene {
       }
     };
 
-    // 입력란 클릭 → 포커스
     const hitInput = this.add.rectangle(boxX + boxW / 2, inputY + rowH / 2, boxW, rowH, 0x000000, 0)
       .setDepth(10).setInteractive({ useHandCursor: true });
     hitInput.on('pointerdown', () => {
@@ -439,14 +579,10 @@ class SettingsScene extends Phaser.Scene {
       }
     });
 
-    // 키보드 입력
     this.input.keyboard.on('keydown', (e) => {
       if (!this._inputFocused) return;
-      if (e.key === 'Backspace') {
-        inputValue = inputValue.slice(0, -1);
-      } else if (e.key.length === 1) {
-        inputValue += e.key;
-      }
+      if (e.key === 'Backspace') inputValue = inputValue.slice(0, -1);
+      else if (e.key.length === 1) inputValue += e.key;
       updateDisplay();
     });
     this.input.keyboard.on('keydown-V', (e) => {
@@ -459,11 +595,9 @@ class SettingsScene extends Phaser.Scene {
       }
     });
 
-    // el.value 인터페이스 유지 (로드 버튼에서 사용)
     const el = { get value() { return inputValue; } };
-    this._inputEl = null; // DOM input 없음
+    this._inputEl = null;
 
-    // 로드 버튼
     this._makeButton(rightBtnX, inputY + rowH / 2, btnW, rowH, '로드', () => {
       const val = el.value.trim();
       if (!val) { this._showToast(cx, H * 0.5, '코드를 입력해주세요'); return; }
@@ -485,7 +619,6 @@ class SettingsScene extends Phaser.Scene {
 
     // ── 초기화 ────────────────────────────────────────────────
     const resetY = loadY + H * 0.22;
-
     const sep = this.add.graphics();
     sep.lineStyle(1, 0x1a1a22, 1);
     sep.lineBetween(boxX, resetY - 14, W * 0.92, resetY - 14);
@@ -506,9 +639,9 @@ class SettingsScene extends Phaser.Scene {
       this._showConfirmPopup(cx, H, '모든 데이터를 초기화하겠습니까?', () => {
         SaveManager.deleteAll();
         localStorage.removeItem('settings_font');
+        InputManager.resetToDefaults();
         FontManager.setActive('game');
         this._removeInputEl();
-        // 붉은 토스트 후 저장 탭 재시작
         this._showToast(cx, H * 0.5, '초기화 완료', () => {
           this.scene.restart({ from: this.fromScene, tab: 'save' });
         }, '#ff6666');
@@ -541,7 +674,6 @@ class SettingsScene extends Phaser.Scene {
 
     const hit = this.add.rectangle(x, y, bw, bh, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
-
     hit.on('pointerover', () => { draw(hc, hb); });
     hit.on('pointerout',  () => { draw(nc, nb); });
     hit.on('pointerdown', onClick);
@@ -555,12 +687,10 @@ class SettingsScene extends Phaser.Scene {
     const popX = cx - popW / 2;
     const popY = H * 0.5 - popH / 2;
 
-
-
     const overlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.65)
       .setOrigin(0).setDepth(500).setInteractive();
 
-    const box = this.add.graphics().setDepth(501).setAlpha(1);
+    const box = this.add.graphics().setDepth(501);
     box.fillStyle(0x060608, 1);
     box.lineStyle(1, 0x333344, 1);
     box.strokeRect(popX, popY, popW, popH);
@@ -576,10 +706,8 @@ class SettingsScene extends Phaser.Scene {
     const btnGap = popW * 0.20;
 
     const closePopup = () => {
-      overlay.destroy(); box.destroy();
-      msgText.destroy();
+      overlay.destroy(); box.destroy(); msgText.destroy();
       confirmBtn.destroy(); cancelBtn.destroy();
-
     };
 
     const makePopBtn = (bx, label, color, hcolor, cb) => {
@@ -594,13 +722,8 @@ class SettingsScene extends Phaser.Scene {
       return t;
     };
 
-    const confirmBtn = makePopBtn(cx - btnGap, '확인', '#aa6666', '#cc8888', () => {
-      closePopup();
-      onConfirm();
-    });
-    const cancelBtn = makePopBtn(cx + btnGap, '취소', '#555566', '#aaaaaa', () => {
-      closePopup();
-    });
+    const confirmBtn = makePopBtn(cx - btnGap, '확인', '#aa6666', '#cc8888', () => { closePopup(); onConfirm(); });
+    const cancelBtn  = makePopBtn(cx + btnGap, '취소', '#555566', '#aaaaaa', () => { closePopup(); });
   }
 
   // ── 토스트 ────────────────────────────────────────────────────
@@ -645,6 +768,7 @@ class SettingsScene extends Phaser.Scene {
     btn.on('pointerover', () => btn.setStyle({ fill: '#aaaaaa' }));
     btn.on('pointerout',  () => btn.setStyle({ fill: '#444455' }));
     btn.on('pointerdown', () => {
+      if (InputManager._rebindListener) InputManager._cancelRebind();
       this._removeInputEl();
       const flash = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x060608, 0)
         .setOrigin(0).setDepth(999);
@@ -654,7 +778,9 @@ class SettingsScene extends Phaser.Scene {
       });
     });
 
+    // ESC: 리바인딩 진행 중이 아닐 때만 뒤로가기
     this.input.keyboard.on('keydown-ESC', () => {
+      if (InputManager._rebindTarget) return; // 리바인딩이 먼저 처리
       this._removeInputEl();
       this.scene.start(this.fromScene);
     });
