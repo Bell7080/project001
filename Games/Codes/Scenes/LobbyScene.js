@@ -72,51 +72,90 @@ class LobbyScene extends Phaser.Scene {
   }
 
   _buildTitle(W, H, cx) {
+    // ── 스케일 상수 ─────────────────────────────────────────
+    // 림버스 스타일: 가로 압축 + 세로 확장으로 길쭉한 글자
+    const SX     = 0.75;
+    const SY     = 1.30;
+    const FS     = scaledFontSize(68, this.scale);   // 타이틀 기준 크기
+    const titleY = H * 0.355;
+
+    // ── 상단 레이블 ──────────────────────────────────────────
     const label = this.add.text(cx, H * 0.20, 'P  R  O  J  E  C  T    0  0  1', {
-      fontSize: scaledFontSize(12, this.scale),   // 10 → 12
+      fontSize: scaledFontSize(12, this.scale),
       fill: '#3a2510',
       fontFamily: FontManager.MONO,
       letterSpacing: 3,
     }).setOrigin(0.5).setAlpha(0);
 
-    const title = this.add.text(cx, H * 0.35, 'NEURAL  RUST', {
-      fontSize: scaledFontSize(68, this.scale),   // 제목 — 유지
+    // ── 글로우 레이어 1 — 가장 바깥쪽, 넓은 번짐 ────────────
+    const glow1 = this.add.text(cx, titleY, 'NEURAL  RUST', {
+      fontSize: FS,
+      fill: '#a05018',
+      fontFamily: FontManager.TITLE,
+      stroke: '#7a3010',
+      strokeThickness: 26,
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
+
+    // ── 글로우 레이어 2 — 안쪽 중간 번짐 ────────────────────
+    const glow2 = this.add.text(cx, titleY, 'NEURAL  RUST', {
+      fontSize: FS,
+      fill: '#c87030',
+      fontFamily: FontManager.TITLE,
+      stroke: '#8a4010',
+      strokeThickness: 12,
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
+
+    // ── 아웃라인 레이어 — 림버스 특유의 선명한 테두리 ────────
+    // 글자 내부를 어둡게, 테두리를 선명한 녹슨 주황으로
+    const outline = this.add.text(cx, titleY, 'NEURAL  RUST', {
+      fontSize: FS,
+      fill: '#0a0604',
+      fontFamily: FontManager.TITLE,
+      stroke: '#7a4015',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
+
+    // ── 메인 타이틀 — 최상단 크림 글자 ──────────────────────
+    const title = this.add.text(cx, titleY, 'NEURAL  RUST', {
+      fontSize: FS,
       fill: '#c8bfb0',
       fontFamily: FontManager.TITLE,
-      shadow: {
-        offsetX: 0, offsetY: 0,
-        color: '#a05018',
-        blur: 24,
-        fill: false,
-        stroke: false,
-      },
-    }).setOrigin(0.5).setAlpha(0);
+      stroke: '#2a1408',
+      strokeThickness: 1,
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
 
-    const subKo = this.add.text(cx, H * 0.49, '뉴  럴  러  스  트', {
-      fontSize: scaledFontSize(17, this.scale),   // 14 → 17
+    // ── 한글 부제 ────────────────────────────────────────────
+    const subKo = this.add.text(cx, H * 0.51, '뉴  럴  러  스  트', {
+      fontSize: scaledFontSize(17, this.scale),
       fill: '#3d2010',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
     }).setOrigin(0.5).setAlpha(0);
 
-    const tagline = this.add.text(cx, H * 0.57, '소프트웨어만 살아남은 세계  —  붕괴 후 102년', {
-      fontSize: scaledFontSize(14, this.scale),   // 11 → 14
+    // ── 세계관 태그라인 ──────────────────────────────────────
+    const tagline = this.add.text(cx, H * 0.58, '소프트웨어만 살아남은 세계  —  붕괴 후 102년', {
+      fontSize: scaledFontSize(14, this.scale),
       fill: '#251508',
       fontFamily: FontManager.MONO,
       letterSpacing: 1,
     }).setOrigin(0.5).setAlpha(0);
 
-    this.tweens.add({ targets: label,   alpha: 1, duration: 900,  delay: 300,  ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: title,   alpha: 1, duration: 1400, delay: 600,  ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: subKo,   alpha: 1, duration: 900,  delay: 1000, ease: 'Sine.easeOut' });
-    this.tweens.add({ targets: tagline, alpha: 1, duration: 800,  delay: 1300, ease: 'Sine.easeOut' });
+    // ── 페이드인 순서 ─────────────────────────────────────────
+    // 글로우 먼저 올라오고, 그 위에 선명한 글자가 나타나는 연출
+    this.tweens.add({ targets: label,   alpha: 1,    duration: 900,  delay: 300,  ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: glow1,   alpha: 0.12, duration: 1800, delay: 400,  ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: glow2,   alpha: 0.28, duration: 1600, delay: 500,  ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: outline, alpha: 0.90, duration: 1200, delay: 600,  ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: title,   alpha: 1,    duration: 1200, delay: 650,  ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: subKo,   alpha: 1,    duration: 900,  delay: 1000, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: tagline, alpha: 1,    duration: 800,  delay: 1300, ease: 'Sine.easeOut' });
   }
 
   _buildMenu(W, H) {
     const hasSave = SaveManager.hasSave();
     const x     = W * 0.07;
     const baseY = H * 0.68;
-    const gap   = parseInt(scaledFontSize(44, this.scale));  // 40 → 44
+    const gap   = parseInt(scaledFontSize(44, this.scale));
 
     const items = hasSave
       ? [
@@ -137,16 +176,16 @@ class LobbyScene extends Phaser.Scene {
   }
 
   _makeMenuButton(label, x, y, key, delay) {
-    const indent = parseInt(scaledFontSize(18, this.scale));  // 16 → 18
+    const indent = parseInt(scaledFontSize(18, this.scale));
 
     const marker = this.add.text(x - indent, y, '│', {
-      fontSize: scaledFontSize(17, this.scale),   // 14 → 17
+      fontSize: scaledFontSize(17, this.scale),
       fill: '#2a1508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setAlpha(0);
 
     const btn = this.add.text(x, y, label, {
-      fontSize: scaledFontSize(22, this.scale),   // 18 → 22
+      fontSize: scaledFontSize(22, this.scale),
       fill: '#4a3020',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0.5).setAlpha(0).setInteractive({ useHandCursor: true });
@@ -165,7 +204,7 @@ class LobbyScene extends Phaser.Scene {
       underline.clear();
       underline.lineStyle(1, 0x6b3010, 0.8);
       underline.lineBetween(
-        x, y + parseInt(scaledFontSize(16, this.scale)),  // 13 → 16
+        x, y + parseInt(scaledFontSize(16, this.scale)),
         x + btn.width + shift + 4, y + parseInt(scaledFontSize(16, this.scale))
       );
     });
@@ -209,13 +248,13 @@ class LobbyScene extends Phaser.Scene {
 
   _buildFooter(W, H) {
     this.add.text(W - 14, H - 12, 'v0.0.1  prototype', {
-      fontSize: scaledFontSize(12, this.scale),   // 10 → 12
+      fontSize: scaledFontSize(12, this.scale),
       fill: '#1e1008',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 1);
 
     this.add.text(14, H - 12, 'YEAR 102  ·  POST-COLLAPSE', {
-      fontSize: scaledFontSize(12, this.scale),   // 9 → 12
+      fontSize: scaledFontSize(12, this.scale),
       fill: '#1e1008',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 1);
