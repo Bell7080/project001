@@ -15,9 +15,21 @@ const FontManager = {
       weight: 'normal',
       style:  'normal',
     },
+    {
+      key:    'BMKiranghaerang',
+      family: 'BMKiranghaerang',
+      src:    'Games/Assets/Fonts/BMKIRANGHAERANG.woff2',
+      weight: 'normal',
+      style:  'normal',
+    },
   ],
 
   PRESETS: {
+    kirang: {
+      TITLE: "'BMKiranghaerang', monospace",
+      BODY:  "'BMKiranghaerang', monospace",
+      MONO:  "'BMKiranghaerang', monospace",
+    },
     game: {
       TITLE: "'NeoDunggeunmoPro', monospace",
       BODY:  "'NeoDunggeunmoPro', monospace",
@@ -33,7 +45,7 @@ const FontManager = {
   FALLBACK: "'NeoDunggeunmoPro', monospace",
 
   init() {
-    const saved = localStorage.getItem('settings_font') || 'game';
+    const saved = localStorage.getItem('settings_font') || 'kirang';
     this._activePreset = saved;
     if (this.FONTS.length === 0) return Promise.resolve();
     return Promise.all(this.FONTS.map(f => this._loadFont(f)))
@@ -49,9 +61,9 @@ const FontManager = {
     console.log(`[FontManager] 폰트 전환 → ${presetKey}`);
   },
 
-  get TITLE() { return (this.PRESETS[this._activePreset] || this.PRESETS.game).TITLE; },
-  get BODY()  { return (this.PRESETS[this._activePreset] || this.PRESETS.game).BODY;  },
-  get MONO()  { return (this.PRESETS[this._activePreset] || this.PRESETS.game).MONO;  },
+  get TITLE() { return (this.PRESETS[this._activePreset] || this.PRESETS.kirang).TITLE; },
+  get BODY()  { return (this.PRESETS[this._activePreset] || this.PRESETS.kirang).BODY;  },
+  get MONO()  { return (this.PRESETS[this._activePreset] || this.PRESETS.kirang).MONO;  },
 
   _loadFont(font) {
     return new Promise(resolve => {
