@@ -126,7 +126,6 @@
       position: relative;
       opacity: 0;
       animation: fadeUp 1.2s ease 0.5s forwards;
-      /* 세로로 길쭉하게: 가로 압축 + 세로 확장 (LobbyScene SX/SY 와 동일) */
       transform-origin: center center;
     }
 
@@ -139,14 +138,9 @@
       position: relative;
       display: inline-block;
 
-      /* ★ 림버스 스타일 스케일: 가로 75%, 세로 130% */
       transform: scaleX(0.75) scaleY(1.30);
       transform-origin: center center;
 
-      /* ★ 림버스 스타일 꾸밈:
-           - -1px/-1px 얇은 다크 아웃라인 (선명도)
-           - 중간 번짐 (녹슨 주황)
-           - 바깥쪽 넓은 글로우                         */
       text-shadow:
         0 0  0px #2a1408,
         0 0  6px rgba(160, 80, 20, 0.55),
@@ -154,7 +148,6 @@
         0 0 40px rgba(100, 40,  8, 0.20),
         0 0 70px rgba( 80, 30,  5, 0.10);
 
-      /* CSS paint-order: stroke 먼저 → 아웃라인이 글자 바깥으로만 */
       -webkit-text-stroke: 1.5px #5a3010;
     }
 
@@ -197,7 +190,7 @@
       font-size: clamp(11px, 1.4vw, 16px);
       letter-spacing: clamp(4px, 1vw, 10px);
       text-align: center;
-      margin-top: 18px;   /* 세로 확장으로 제목이 커진 만큼 여백 추가 */
+      margin-top: 18px;
       opacity: 0;
       animation: fadeUp 1s ease 0.9s forwards;
     }
@@ -381,12 +374,8 @@
   1. Phaser 3 CDN
   2. Managers  ← 씬들이 의존하는 핵심 클래스
   3. Scenes    ← 매니저 로드 후
+     - Atelier 관련 파일은 AtelierScene.js 보다 먼저 로드
   4. main.js   ← 반드시 마지막 (Phaser.Game 초기화)
-
-  새 씬 추가 시:
-    - Games/Codes/Scenes/ 에 파일 생성
-    - 아래 Scenes 블록에 <script src="..."> 한 줄 추가
-    - Games/Codes/main.js 의 scene 배열에 클래스명 추가
 ================================================================ -->
 
 <!-- ① Phaser 3 -->
@@ -404,6 +393,14 @@
 <script src="Games/Codes/Scenes/LoadingScene.js"></script>
 <script src="Games/Codes/Scenes/SettingsScene.js"></script>
 <script src="Games/Codes/Scenes/GameScene.js"></script>
+
+<!-- ③-Atelier : AtelierScene 의존 파일들을 먼저 로드 -->
+<script src="Games/Codes/Scenes/AtelierTabs.js"></script>
+<script src="Games/Codes/Scenes/AtelierHUD.js"></script>
+<script src="Games/Codes/Scenes/Tab_Explore.js"></script>
+<script src="Games/Codes/Scenes/Tab_Stubs.js"></script>
+<script src="Games/Codes/Scenes/AtelierScene.js"></script>
+<script src="Games/Codes/Scenes/ExploreScene.js"></script>
 
 <!-- ④ Entry point — 반드시 마지막 -->
 <script src="Games/Codes/main.js"></script>
