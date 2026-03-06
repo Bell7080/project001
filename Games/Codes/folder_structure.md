@@ -47,19 +47,20 @@ neural-rust/
 │           ├── LoadingScene.js             ← 씬 전환 로딩
 │           ├── GameScene.js                ← 인게임 플레이스홀더
 │           ├── ExploreScene.js             ← 탐색 슬롯 씬
-│           │
-│           ├── AtelierHUD.js               ← 공방 상단 Day / Arc HUD
-│           ├── AtelierTabs.js              ← 탭 버튼 공통 빌더
 │           ├── AtelierScene.js             ← 공방 메인 씬
 │           │
-│           ├── Tab_Explore.js              ← 탐색 탭
-│           ├── Tab_Manage.js               ← 관리 탭 (뼈대·카드 그리드)
-│           ├── Tab_Manage_Popup.js         ← 관리 탭 프로필 팝업
-│           ├── Tab_Manage_Utils.js         ← 관리 탭 유틸 (툴팁·회복·토스트)
-│           ├── Tab_Squad.js                ← 탐사대 탭 (뼈대)
-│           ├── Tab_Squad_Grid.js           ← 탐사대 3×3 격자
-│           ├── Tab_Squad_Slider.js         ← 탐사대 슬라이더·필터
-│           ├── Tab_Stubs.js                ← 미구현 탭 플레이스홀더
+│           ├── Ateliers/                   ← 공방 관련 파일 모음
+│           │   ├── AtelierHUD.js           ← 공방 상단 Day / Arc HUD
+│           │   ├── AtelierTabs.js          ← 탭 버튼 공통 빌더
+│           │   └── Tabs/
+│           │       ├── Tab_Explore.js      ← 탐색 탭
+│           │       ├── Tab_Manage.js       ← 관리 탭 (뼈대·카드 그리드)
+│           │       ├── Tab_Manage_Popup.js ← 관리 탭 프로필 팝업
+│           │       ├── Tab_Manage_Utils.js ← 관리 탭 유틸 (툴팁·회복·토스트)
+│           │       ├── Tab_Squad.js        ← 탐사대 탭 (뼈대)
+│           │       ├── Tab_Squad_Grid.js   ← 탐사대 3×3 격자
+│           │       ├── Tab_Squad_Slider.js ← 탐사대 슬라이더·필터
+│           │       └── Tab_Stubs.js        ← 미구현 탭 플레이스홀더
 │           │
 │           └── Settings/
 │               ├── Settings_Tab_Font.js    ← 설정 > 폰트
@@ -82,7 +83,7 @@ neural-rust/
 <!-- ① Phaser 3 -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 
-<!-- ② Managers (의존성 순서) -->
+<!-- ② Managers (의존성 순서 엄수) -->
 <script src="Games/Codes/Managers/FontManager.js"></script>
 <script src="Games/Codes/Managers/SaveManager.js"></script>
 <script src="Games/Codes/Managers/StoryManager.js"></script>
@@ -105,26 +106,25 @@ neural-rust/
 <script src="Games/Codes/Scenes/Settings/Settings_Tab_Save.js"></script>
 <script src="Games/Codes/Scenes/Settings/SettingsScene.js"></script>
 
-<!-- ③-Atelier (탭 뼈대 먼저, 확장 파일 순서 엄수) -->
-<script src="Games/Codes/Scenes/Tab_Explore.js"></script>
-<script src="Games/Codes/Scenes/Tab_Stubs.js"></script>
-<script src="Games/Codes/Scenes/Tab_Manage.js"></script>
-<script src="Games/Codes/Scenes/Tab_Manage_Popup.js"></script>
-<script src="Games/Codes/Scenes/Tab_Manage_Utils.js"></script>
-<script src="Games/Codes/Scenes/Tab_Squad.js"></script>
-<script src="Games/Codes/Scenes/Tab_Squad_Grid.js"></script>
-<script src="Games/Codes/Scenes/Tab_Squad_Slider.js"></script>
-<script src="Games/Codes/Scenes/AtelierTabs.js"></script>
-<script src="Games/Codes/Scenes/AtelierHUD.js"></script>
+<!-- ③-Atelier (뼈대 → 확장 순서 엄수) -->
+<script src="Games/Codes/Scenes/Ateliers/AtelierTabs.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/AtelierHUD.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Explore.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Stubs.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Manage.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Manage_Popup.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Manage_Utils.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Squad.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Squad_Grid.js"></script>
+<script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Squad_Slider.js"></script>
 <script src="Games/Codes/Scenes/AtelierScene.js"></script>
 
 <!-- ④ 진입점 -->
 <script src="Games/Codes/main.js"></script>
 ```
 
-> ⚠️ 현재 index.html의 실제 로드 순서와 비교 시:
-> - `SettingsScene.js` 경로가 `Games/Codes/Scenes/SettingsScene.js`로 잘못 기재되어 있음 → `Games/Codes/Scenes/Settings/SettingsScene.js`로 수정 필요
-> - `CharacterManager.js`가 Atelier 블록 중간에 로드됨 → Managers 블록으로 이동 권장
+> ⚠️ `AtelierScene.js`는 모든 탭 클래스가 정의된 후 로드되어야 합니다.
+> 탭 뼈대(Tab_Manage, Tab_Squad) 뒤에 반드시 확장 파일(Popup, Utils, Grid, Slider)이 와야 합니다.
 
 ---
 
@@ -177,4 +177,4 @@ neural-rust/
 | 키 바인딩 저장 | `localStorage` | 동상 |
 | 볼륨 저장 | `localStorage` | 동상 |
 
-변경 대상 함수: `SaveManager._read/_write`, `InputManager._saveBinds/_loadBinds`, `AudioManager._save/_load`
+변경 대상 함수: `SaveManager._read/_write`, `InputManager._saveBinds/_loadBinds`, `AudioManager._save/_load`, `CharacterManager` (saveAll/loadAll/saveSquad/loadSquad)

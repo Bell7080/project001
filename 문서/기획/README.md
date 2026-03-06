@@ -28,7 +28,10 @@ neural-rust/
     ├── Assets/Fonts/
     └── Codes/
         ├── Managers/           ← 전역 매니저 7종
-        └── Scenes/             ← 씬 파일 + Settings/ 서브폴더
+        └── Scenes/
+            ├── LobbyScene.js / LoadingScene.js / GameScene.js / ExploreScene.js / AtelierScene.js
+            ├── Ateliers/       ← AtelierHUD.js / AtelierTabs.js / Tabs/*.js
+            └── Settings/       ← Settings_Tab_*.js / SettingsScene.js
 ```
 
 → 파일 구조 전체 및 스크립트 로드 순서: `문서/개발/folder_structure.md`
