@@ -8,44 +8,30 @@
 ## 📁 저장소 구조
 
 ```
-neural-rust/  (project001)
+neural-rust/
 │
-├── 📒 문서/
+├── 문서/
 │   ├── 기획/
 │   │   ├── README.md          ← 이 파일
+│   │   ├── GDD.md             ← 게임 시스템 설계 (루프·직군·UI 등)
 │   │   ├── 세계관.md           ← 핵심 설정 (세계구조·역사·법칙·세력·모티프)
 │   │   ├── 시나리오.md          ← 스토리 흐름·씬 목록·대사·엔딩·로어
 │   │   ├── 캐릭터.md            ← 인간·AI 캐릭터 구분 설정집
-│   │   ├── GDD.md              ← 게임 시스템 설계 (루프·직군·UI 등)
 │   │   └── 레퍼런스.md          ← 참고 게임·비주얼·글 자료
 │   └── 개발/
-│       ├── 개발 일지.md
-│       └── 시스템 기획.md       ← 시스템 세부 설계
+│       ├── 개발 일지.md         ← 날짜별 작업 기록
+│       ├── 시스템 기획.md        ← 시스템 세부 설계 (공방·자원·직군·세력·진행구조)
+│       ├── 탐사대_시스템.md      ← 탐사대·직업·스탯·Cog·던전 배치 설계
+│       └── folder_structure.md  ← 파일 구조·스크립트 로드 순서·저장 키
 │
-├── 🎮 Games/
-│   ├── Assets/Fonts/
-│   └── Codes/
-│       ├── Managers/
-│       │   ├── FontManager.js
-│       │   ├── SaveManager.js
-│       │   ├── StoryManager.js
-│       │   ├── InputManager.js
-│       │   └── utils.js
-│       └── Scenes/
-│           ├── LobbyScene.js
-│           ├── LoadingScene.js
-│           ├── SettingsScene.js
-│           ├── GameScene.js
-│           └── Atelier/
-│               ├── AtelierScene.js   ← 공방 메인 씬
-│               ├── AtelierHUD.js     ← Day / Arc HUD
-│               ├── AtelierTabs.js    ← 탭 버튼 공통 빌더
-│               └── tabs/
-│                   ├── Tab_Explore.js  ← 탐색 탭
-│                   └── Tab_Stubs.js    ← 미구현 탭 플레이스홀더
-│
-└── index.html
+└── Games/
+    ├── Assets/Fonts/
+    └── Codes/
+        ├── Managers/           ← 전역 매니저 7종
+        └── Scenes/             ← 씬 파일 + Settings/ 서브폴더
 ```
+
+→ 파일 구조 전체 및 스크립트 로드 순서: `문서/개발/folder_structure.md`
 
 ---
 
@@ -68,10 +54,12 @@ neural-rust/  (project001)
 | 용어 | 원어 | 의미 |
 |------|------|------|
 | 아크 | Arc | 전류를 정제한 이 세계의 화폐. 선박 동력원이자 경제 기반 |
-| 코그 | Cog | **위험도 등급 체계.** Cog 1~5. 구역·적·기록물 등에 적용 |
+| 코그 | Cog | 위험도 등급 체계. Cog 1~7. 구역·AI·괴수 등에 적용 |
 | 드레지 | Dredge | AI를 고철 몸체에 불러오는 행위. 심연에서 건져올린다는 뜻 |
 | 공방 | Atelier | 인게임 허브. 탭 기반 경영 화면 |
-| 마스트 | Mast | 이 세계의 파벌·세력 단위 |
+| 마스트 | Mast | 이 세계의 파벌·세력 단위. 수장은 앵커(Anchor) |
+
+→ 용어 전체: `문서/기획/세계관.md` §5
 
 ---
 
@@ -107,41 +95,71 @@ neural-rust/  (project001)
 [ 다음날 아침 ]  순환
 ```
 
+→ 시스템 세부: `문서/개발/시스템 기획.md`
+
 ---
 
 ## 🏗️ 공방 (Atelier) 탭 구조
 
 ```
-좌측: [창고] [도감] [회상]      HUD(Day|Arc)      [설정]
-우측:                        [영입][탐사대][시설][외주][드레지]
+좌측: [상점] [창고] [도감] [회상]      HUD(Day|Arc)      [설정]
+우측:                              [영입][관리][탐사대][시설][외주][드레지]
 
-              [ 중앙 콘텐츠 패널 ]
+                    [ 중앙 콘텐츠 패널 ]
 
-                  [ 탐  색 ]  ← 하단 중앙 기본 탭
+                         [ 탐  색 ]  ← 하단 중앙 기본 탭
 ```
 
----
-
-## 📝 기획 문서 작업 순서
-
-```
-1. 세계관.md       세력 용어 확정 및 세력 설정 추가
-2. 캐릭터.md       등장인물 추가
-3. 시나리오.md     씬 목록 작성 (ID 부여)
-4. StoryManager.js STORY_DATA 에 씬 ID 등록
-5. Scenes/         실제 씬 파일 구현
-```
+| 탭 키 | 클래스 | 파일 |
+|-------|--------|------|
+| `explore` | `Tab_Explore` | `Tab_Explore.js` |
+| `manage` | `Tab_Manage` | `Tab_Manage.js` + Popup + Utils |
+| `squad` | `Tab_Squad` | `Tab_Squad.js` + Grid + Slider |
+| `recruit` | `Tab_Recruit` | `Tab_Stubs.js` (플레이스홀더) |
+| `facility` | `Tab_Facility` | `Tab_Stubs.js` (플레이스홀더) |
+| `outsource` | `Tab_Outsource` | `Tab_Stubs.js` (플레이스홀더) |
+| `dredge` | `Tab_Dredge` | `Tab_Stubs.js` (플레이스홀더) |
+| `shop` | `Tab_Shop` | `Tab_Stubs.js` (플레이스홀더) |
+| `storage` | `Tab_Storage` | `Tab_Stubs.js` (플레이스홀더) |
+| `codex` | `Tab_Codex` | `Tab_Stubs.js` (플레이스홀더) |
+| `memory` | `Tab_Memory` | `Tab_Stubs.js` (플레이스홀더) |
 
 ---
 
 ## 💾 저장 데이터 구조
 
-| 키 | 내용 |
-|---|---|
-| `neural_rust_save` | 인게임 진행 데이터 (arc 포함) |
-| `neural_rust_settings` | 설정 (폰트 등) |
-| `neural_rust_story` | 스토리 진행 (Day · 플래그 · 이벤트 로그 · 로어) |
-| `neural_rust_keybinds` | 키 바인딩 |
+| 키 | 관리 파일 | 내용 |
+|---|---|---|
+| `neural_rust_save` | SaveManager | 인게임 진행 데이터 (arc 포함) |
+| `neural_rust_settings` | SaveManager | 설정 (폰트 등) |
+| `neural_rust_story` | SaveManager | 스토리 진행 (Day·플래그·이벤트 로그·로어) |
+| `neural_rust_keybinds` | InputManager | 키 바인딩 |
+| `neural_rust_audio` | AudioManager | 볼륨 설정 (마스터·BGM·SFX) |
+| `settings_font` | FontManager | 폰트 선택 |
+| `nr_characters` | CharacterManager | 캐릭터 데이터 |
+| `nr_squad` | CharacterManager | 탐사대 편성 |
+
+---
+
+## 📝 기획 문서 연동 구조
+
+| 문서 | 내용 | 연동 |
+|------|------|------|
+| `GDD.md` | 게임 전체 설계 요약 | 세계관·시나리오·시스템 기획 참조 |
+| `세계관.md` | 세계·역사·법칙·마스트·Cog | GDD §3~6, 시나리오 §1 참조 |
+| `시나리오.md` | 스토리·씬 목록·로어 | StoryManager.js `STORY_DATA`와 동기화 |
+| `캐릭터.md` | 등장인물 설정 | 시나리오.md 참조 |
+| `시스템 기획.md` | 시스템 세부 설계 | GDD §4, 탐사대_시스템.md 참조 |
+| `탐사대_시스템.md` | 탐사대·직업·스탯·던전 | CharacterManager.js, Tab_Squad.js 참조 |
+| `folder_structure.md` | 파일 구조·로드 순서·저장 키 | index.html과 동기화 |
+
+### 씬 추가 작업 순서
+
+```
+1. 시나리오.md       씬 ID 부여 및 내용 작성
+2. StoryManager.js   STORY_DATA 에 씬 ID 등록
+3. Scenes/           씬 파일 구현
+```
 
 ---
 
@@ -151,17 +169,20 @@ neural-rust/  (project001)
 |---|---|---|
 | `[BROWSER-ONLY]` 전체화면 | `main.js` | `win.setFullScreen()` 교체 |
 | `[BROWSER-ONLY]` 오버레이 | `main.js` | `app.whenReady()` 로 교체 |
-| localStorage | `SaveManager._read/_write` | `fs` / `electron-store` 교체 |
-| 키 바인딩 저장 | `InputManager._saveBinds/_loadBinds` | 동상 |
+| localStorage (세이브) | `SaveManager._read/_write` | `fs` / `electron-store` 교체 |
+| localStorage (키 바인딩) | `InputManager._saveBinds/_loadBinds` | 동상 |
+| localStorage (볼륨) | `AudioManager._save/_load` | 동상 |
+| localStorage (폰트) | `FontManager.init`, `Settings_Tab_Font` | 동상 |
+| localStorage (캐릭터) | `CharacterManager` | 동상 |
 
 ---
 
 ## 🗺️ 개발 로드맵
 
-| 단계 | 내용 |
-|---|---|
-| 1단계 ✅ | 환경 구성 · 매니저 구축 · 기획 문서 정리 · 타이틀 확정 |
-| 2단계 🔄 | 공방(Atelier) 씬 탭 레이아웃 · 탐색/영입 구현 + 세계관·시나리오 작업 |
-| 3단계 | 핵심 시스템 구현 (Arc 루프 · 낚시꾼 디펜스 · 다이버 수집) + 스토리 씬 |
-| 4단계 | 세력 시스템 + Electron 패키징 → exe |
-| 5단계 | Unity 이식 |
+| 단계 | 내용 | 상태 |
+|---|---|---|
+| 1단계 | 환경 구성·매니저 구축·기획 문서 정리·타이틀 확정 | ✅ 완료 |
+| 2단계 | 공방 탭 레이아웃·탐색/관리/탐사대 구현 + 세계관·시나리오 작업 | 🔄 진행 중 |
+| 3단계 | 핵심 시스템 구현 (Arc 루프·낚시꾼 디펜스·다이버 수집) + 스토리 씬 | ⬜ 예정 |
+| 4단계 | 세력 시스템 + Electron 패키징 → exe | ⬜ 예정 |
+| 5단계 | Unity 이식 | ⬜ 예정 |
