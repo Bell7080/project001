@@ -105,12 +105,10 @@ Object.assign(Tab_Squad.prototype, {
     const portW    = cw - pad * 2;
     const portH    = Math.floor(cw * 0.68);                      // ③ 초상화
     const hpBarH   = 4;                                          // ④ HP 바
-    const mapH     = inSquad
-                     ? parseInt(scaledFontSize(28, scene.scale)) // ⑤ 미니맵
-                     : 0;
-    const botPad   = inSquad ? 6 : 5;
+    const botPad   = 5;
+    // 미니맵은 초상화 하단부 오버레이로 처리 — 별도 높이 없음
 
-    const cardH = cogH + nameH + portH + hpBarH + mapH + botPad;
+    const cardH = cogH + nameH + portH + hpBarH + botPad;
 
     const c   = scene.add.container(x, y);
     const cbg = scene.add.graphics();
@@ -184,17 +182,15 @@ Object.assign(Tab_Squad.prototype, {
     hpFg.fillStyle(hpCol, 1);
     hpFg.fillRect(pad, hpY, Math.max(1, Math.round(portW * hpPct)), hpBarH);
 
-    // ── ⑤ 미니맵 (배치 시) ───────────────────────────────────
-    let miniMapObjs = [];
+    // ── ⑤ 미니맵 (배치 시) — 초상화 하단부 오버레이 ──────────
+    // Graphics는 컨테이너 로컬 좌표로 직접 그려야 오버플로우 없음
+    let miniMapGfx = null;
     if (inSquad) {
-      const mapY  = hpY + hpBarH + 3;
-      const mapCx = cw / 2;
-      const mapCy = mapY + mapH / 2 - 1;
-      miniMapObjs = this._buildMiniMap(scene, mapCx, mapCy, deploySlots, cw * 0.88);
+      miniMapGfx = this._buildMiniMapOverlay(scene, pad, portY, portW, portH, deploySlots);
     }
 
     const items = [cbg, bandG, jobLbl, cogBadge, nameT, portBg, watermark, hpBg, hpFg];
-    if (miniMapObjs.length) items.push(...miniMapObjs);
+    if (miniMapGfx) items.push(miniMapGfx);
     c.add(items);
 
     // ── 히트 영역 ───────────────────────────────────────────────
@@ -255,45 +251,55 @@ Object.assign(Tab_Squad.prototype, {
     return slots;
   },
 
-  // ── 미니맵 빌드 ──────────────────────────────────────────────
-  _buildMiniMap(scene, cx, cy, deploySlots, maxW) {
-    const objs   = [];
-    const cellSz = Math.max(6, Math.floor(maxW / 3.6));
+  // ── 미니맵 오버레이 빌드 ────────────────────────────────────
+  //  단일 Graphics 오브젝트에 모든 셀을 그림
+  //  → 컨테이너에 add() 시 로컬 좌표 그대로 적용되어 오버플로우 없음
+  //
+  //  배치: 초상화 영역(portY ~ portY+portH) 하단 절반에 오버레이
+  //        잠수정 칸(슬롯9)은 3×3 그리드 좌측에 붙여서 표시
+  _buildMiniMapOverlay(scene, pad, portY, portW, portH, deploySlots) {
+    const g      = scene.add.graphics();
     const gap    = 1;
+
+    // 원래 계산식 기반, 상하좌우 4px 여백을 줘서 초상화 안에 가운데 정렬
+    const margin = 4;
+    const cellSz = Math.max(5, Math.floor((portW - margin * 2 - gap * 4) / 4.2));
     const gridW  = cellSz * 3 + gap * 2;
     const gridH  = cellSz * 3 + gap * 2;
     const subW   = cellSz;
     const totalW = subW + gap + gridW;
-    const startX = cx - totalW / 2;
-    const startY = cy - gridH / 2;
 
-    const draw = (lx, ly, filled, isBlue = false) => {
-      const g = scene.add.graphics();
+    // 초상화 영역 하단 중앙 정렬 (하단 margin 여백)
+    const startX = pad + (portW - totalW) / 2;
+    const startY = portY + portH - gridH - margin;
+
+    const drawCell = (lx, ly, filled, isBlue = false) => {
       if (filled) {
+        // 배치됨 — 원래 색감 유지
         g.fillStyle(isBlue ? 0x3a8aaa : 0xffd060, 0.9);
         g.lineStyle(1, isBlue ? 0x2a6a8a : 0xb08840, 1);
       } else {
-        g.fillStyle(0x0a0808, 0.7);
-        g.lineStyle(1, 0x3a2a10, 0.7);
+        // 비어있음 — fill 어둡게, 라인은 밝게 올려서 격자 가시성 확보
+        g.fillStyle(0x080808, 0.85);
+        g.lineStyle(1, 0x666666, 1);
       }
       g.strokeRect(lx, ly, cellSz, cellSz);
       g.fillRect(lx, ly, cellSz, cellSz);
-      objs.push(g);
     };
 
-    // 잠수정 칸
-    draw(startX, startY + cellSz + gap, deploySlots.includes(9), true);
+    // 잠수정 칸 (슬롯 9, 그리드 좌측 중단)
+    drawCell(startX, startY + cellSz + gap, deploySlots.includes(9), true);
 
-    // 3×3
+    // 3×3 격자
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         const idx = row * 3 + col;
         const lx  = startX + subW + gap + col * (cellSz + gap);
-        const ly  = startY + row * (cellSz + gap);
-        draw(lx, ly, deploySlots.includes(idx));
+        const ly  = startY + row  * (cellSz + gap);
+        drawCell(lx, ly, deploySlots.includes(idx));
       }
     }
-    return objs;
+    return g;
   },
 
   // ── 필터 ─────────────────────────────────────────────────────
