@@ -74,60 +74,106 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   bg.fillRect(cx-bw/2, cy-bh/2, bw, bh); bg.strokeRect(cx-bw/2, cy-bh/2, bw, bh);
   this._container.add(bg);
 
-  // 외형 이미지 박스
-  const iSz = bw * 0.40; const iY = cy - bh * 0.29;
+  // 패딩 기준 좌상단 커서 방식으로 배치
+  const pad  = bw * 0.07;
+  const boxL = cx - bw/2 + pad;       // 콘텐츠 좌측 x
+  const boxW = bw - pad * 2;          // 콘텐츠 너비
+  let   curY = cy - bh/2 + pad;       // 현재 y 커서
+
+  // ── 초상화 박스 (콘텐츠 가로 꽉 채움) ─────────────────────
+  const iH = bw * 0.62;               // 초상화 높이 (가로보다 약간 짧게)
+  const iY = curY + iH/2;
   const iBg = scene.add.graphics();
   iBg.fillStyle(0x1e1008, 1); iBg.lineStyle(1, 0x3d2010, 1);
-  iBg.fillRect(cx-iSz/2, iY-iSz/2, iSz, iSz); iBg.strokeRect(cx-iSz/2, iY-iSz/2, iSz, iSz);
+  iBg.fillRect(boxL, curY, boxW, iH);
+  iBg.strokeRect(boxL, curY, boxW, iH);
   this._container.add(iBg);
-  this._spriteBoxX = cx; this._spriteBoxY = iY; this._spriteBoxSz = iSz;
+  this._spriteBoxX = boxL + boxW/2; this._spriteBoxY = iY; this._spriteBoxSz = Math.min(boxW, iH);
   this._spriteImg = null; this._spriteKeyTxt = null;
   this._renderSpriteBox(result.spriteKey);
+  curY += iH + pad * 0.8;
 
-  this._spriteBtn = this._makeRerollBtn(cx, iY + iSz*0.58, bw*0.70,
-    `외형  🎲  ${this.rerolls.sprite}`, () => this._rerollSprite());
+  // ── 외형 재설정 버튼 ────────────────────────────────────────
+  const btnH = 28;
+  this._spriteBtn = this._makeRerollBtn(
+    boxL + boxW/2, curY + btnH/2, boxW,
+    `외형 재설정  🎲  ${this.rerolls.sprite}`, () => this._rerollSprite(), btnH);
+  curY += btnH + pad * 1.4;
 
-  this._statBtn = this._makeRerollBtn(cx, cy - bh*0.03, bw*0.82,
-    `스탯 재설정  🎲  ${this.rerolls.stat}`, () => this._rerollStats());
+  // ── 스탯 재설정 버튼 ────────────────────────────────────────
+  this._statBtn = this._makeRerollBtn(
+    boxL + boxW/2, curY + btnH/2, boxW,
+    `스탯 재설정  🎲  ${this.rerolls.stat}`, () => this._rerollStats(), btnH);
+  curY += btnH + pad * 1.4;
+
+  // ── makeBox 헬퍼 (CharProfile 양식) ────────────────────────
+  // 제목 + 이름(굵게) + 재설정 버튼
+  const makeAbilBox = (titleStr, nameTxtRef, nameVal, rerollCount, rerollCb, btnRef) => {
+    const titleH = parseInt(this._fs(10));
+    const nameH  = parseInt(this._fs(14));
+    const innerPad = 6;
+    const boxH   = innerPad + titleH + 4 + nameH + 6 + btnH + innerPad;
+
+    const boxG = scene.add.graphics();
+    boxG.fillStyle(0x0e0b07, 1);
+    boxG.lineStyle(1, 0x3a2010, 0.7);
+    boxG.strokeRect(boxL, curY, boxW, boxH);
+    boxG.fillRect(boxL, curY, boxW, boxH);
+    this._container.add(boxG);
+
+    // 라벨
+    this._container.add(scene.add.text(boxL + innerPad, curY + innerPad, titleStr, {
+      fontSize: this._fs(9), fill: '#5a3818', fontFamily: FontManager.MONO,
+    }).setOrigin(0, 0));
+
+    // 능력명
+    const nameTxt = scene.add.text(
+      boxL + innerPad, curY + innerPad + titleH + 4, nameVal, {
+      fontSize: this._fs(13), fill: '#e8c060', fontFamily: FontManager.TITLE,
+    }).setOrigin(0, 0);
+    this._container.add(nameTxt);
+    nameTxtRef.ref = nameTxt;  // 외부에서 setText 가능하도록
+
+    // 재설정 버튼
+    const btnY2 = curY + innerPad + titleH + 4 + nameH + 6 + btnH/2;
+    const btn = this._makeRerollBtn(
+      boxL + boxW/2, btnY2, boxW - innerPad*2,
+      `🎲  ${rerollCount}`, rerollCb, btnH);
+    btnRef.ref = btn;
+
+    curY += boxH + pad * 0.8;
+  };
 
   // 패시브
-  const pvY = cy + bh * 0.13;
-  this._container.add(scene.add.text(cx, pvY - 13, '패 시 브', {
-    fontSize: this._fs(10), fill: '#4a2a10', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5));
-  this._passiveTxt = scene.add.text(cx, pvY + 4, result.passive, {
-    fontSize: this._fs(11), fill: '#c8bfb0', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5);
-  this._container.add(this._passiveTxt);
-  this._passiveBtn = this._makeRerollBtn(cx, pvY + 22, bw*0.55,
-    `🎲  ${this.rerolls.passive}`, () => this._rerollPassive());
+  const pRef = {}; const pBtn = {};
+  makeAbilBox('PASSIVE', pRef, result.passive, this.rerolls.passive, () => this._rerollPassive(), pBtn);
+  this._passiveTxtRef = pRef;
+  this._passiveBtn = pBtn.ref;
 
   // 스킬
-  const skY = cy + bh * 0.30;
-  this._container.add(scene.add.text(cx, skY - 13, '스  킬', {
-    fontSize: this._fs(10), fill: '#4a2a10', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5));
-  this._skillTxt = scene.add.text(cx, skY + 4, result.skill, {
-    fontSize: this._fs(11), fill: '#c8bfb0', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5);
-  this._container.add(this._skillTxt);
-  this._skillBtn = this._makeRerollBtn(cx, skY + 22, bw*0.55,
-    `🎲  ${this.rerolls.skill}`, () => this._rerollSkill());
+  const sRef = {}; const sBtn = {};
+  makeAbilBox('SKILL', sRef, result.skill, this.rerolls.skill, () => this._rerollSkill(), sBtn);
+  this._skillTxtRef = sRef;
+  this._skillBtn = sBtn.ref;
 
-  // 확정 버튼
-  const cfY = cy + bh*0.44; const cfW = bw*0.78; const cfH = 26;
+  // ── 영입 확정 버튼 ──────────────────────────────────────────
+  curY += pad * 0.4;
+  const cfH2 = 30;
   const cfBg = scene.add.graphics();
   const drawCf = (h) => {
     cfBg.clear();
-    cfBg.fillStyle(h ? 0xa05018 : 0x3d2010, 1); cfBg.lineStyle(1, 0xa05018, 1);
-    cfBg.fillRect(cx-cfW/2, cfY-cfH/2, cfW, cfH); cfBg.strokeRect(cx-cfW/2, cfY-cfH/2, cfW, cfH);
+    cfBg.fillStyle(h ? 0xa05018 : 0x3d2010, 1);
+    cfBg.lineStyle(1, 0xa05018, 1);
+    cfBg.fillRect(boxL, curY, boxW, cfH2);
+    cfBg.strokeRect(boxL, curY, boxW, cfH2);
   };
   drawCf(false);
   this._container.add(cfBg);
-  this._container.add(scene.add.text(cx, cfY, '영 입  확 정', {
-    fontSize: this._fs(12), fill: '#c8a070', fontFamily: FontManager.MONO,
+  this._container.add(scene.add.text(boxL + boxW/2, curY + cfH2/2, '영 입  확 정', {
+    fontSize: this._fs(13), fill: '#c8a070', fontFamily: FontManager.MONO,
   }).setOrigin(0.5));
-  const cfHit = scene.add.rectangle(cx, cfY, cfW, cfH, 0, 0).setInteractive({ useHandCursor: true });
+  const cfHit = scene.add.rectangle(boxL + boxW/2, curY + cfH2/2, boxW, cfH2, 0, 0)
+    .setInteractive({ useHandCursor: true });
   this._container.add(cfHit);
   cfHit.on('pointerover', () => drawCf(true));
   cfHit.on('pointerout',  () => drawCf(false));
@@ -160,9 +206,9 @@ Tab_Recruit.prototype._renderSpriteBox = function (spriteKey) {
 
 // ── 재설정 버튼 공통 ─────────────────────────────────────────────
 
-Tab_Recruit.prototype._makeRerollBtn = function (cx, y, w, label, cb) {
+Tab_Recruit.prototype._makeRerollBtn = function (cx, y, w, label, cb, h) {
   const { scene } = this;
-  const h = 22;
+  h = h || 22;
   const bg = scene.add.graphics();
   const draw = (hover, disabled) => {
     bg.clear();
@@ -173,7 +219,7 @@ Tab_Recruit.prototype._makeRerollBtn = function (cx, y, w, label, cb) {
   draw(false, false);
   this._container.add(bg);
   const txt = scene.add.text(cx, y, label, {
-    fontSize: this._fs(10), fill: '#7a5028', fontFamily: FontManager.MONO,
+    fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
   }).setOrigin(0.5);
   this._container.add(txt);
   const hit = scene.add.rectangle(cx, y, w, h, 0, 0).setInteractive({ useHandCursor: true });
@@ -226,7 +272,7 @@ Tab_Recruit.prototype._rerollPassive = function () {
   const next = _rFrom(RECRUIT_PASSIVE_POOL[this.result.cog]);
   this._showChoicePopup('패시브  재설정', prev, next, (chosen) => {
     this.result.passive = chosen; this.rerolls.passive--;
-    this._passiveTxt.setText(chosen);
+    this._passiveTxtRef.ref.setText(chosen);
     if (this.rerolls.passive <= 0) this._disableBtn(this._passiveBtn, '✕');
     else this._passiveBtn.txt.setText(`🎲  ${this.rerolls.passive}`);
   }, [prev, next]);
@@ -238,7 +284,7 @@ Tab_Recruit.prototype._rerollSkill = function () {
   const next = _rFrom(RECRUIT_SKILL_POOL[this.result.cog]);
   this._showChoicePopup('스킬  재설정', prev, next, (chosen) => {
     this.result.skill = chosen; this.rerolls.skill--;
-    this._skillTxt.setText(chosen);
+    this._skillTxtRef.ref.setText(chosen);
     if (this.rerolls.skill <= 0) this._disableBtn(this._skillBtn, '✕');
     else this._skillBtn.txt.setText(`🎲  ${this.rerolls.skill}`);
   }, [prev, next]);

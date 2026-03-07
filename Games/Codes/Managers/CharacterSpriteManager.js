@@ -77,8 +77,7 @@ const CharacterSpriteManager = (() => {
         canvas.height = CELL_H;
         const ctx     = canvas.getContext('2d');
 
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, CELL_W, CELL_H);
+        ctx.clearRect(0, 0, CELL_W, CELL_H);
 
         const px = Math.floor((CELL_W - cropW) / 2);
         const py = Math.floor((CELL_H - cropH) / 2);
