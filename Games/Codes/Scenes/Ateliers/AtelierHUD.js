@@ -67,13 +67,20 @@ class AtelierHUD {
       letterSpacing: 3,
     }).setOrigin(0, 0.5);
 
-    scene.add.text(arcX + arcW - parseInt(scaledFontSize(10, scene.scale)), topY,
+    this._arcNumTxt = scene.add.text(arcX + arcW - parseInt(scaledFontSize(10, scene.scale)), topY,
       `${arc}`, {
       fontSize:      scaledFontSize(14, scene.scale),
       fill:          '#f0c050',
       fontFamily:    FontManager.MONO,
       letterSpacing: 1,
     }).setOrigin(1, 0.5);
+
+    // arcUpdated 이벤트 수신 → HUD 숫자 즉시 갱신
+    scene.events.on('arcUpdated', (newArc) => {
+      if (this._arcNumTxt && this._arcNumTxt.scene) {
+        this._arcNumTxt.setText(`${newArc}`);
+      }
+    }, this);
   }
 
   _getArc() {

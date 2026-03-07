@@ -48,7 +48,7 @@ class Tab_Explore {
 
     // ── 상단 라벨 ────────────────────────────────────────────
     const labelY = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
-    scene.add.text(cx, labelY, '[ 탐  색 ]', {
+    const labelTxt = scene.add.text(cx, labelY, '[ 탐  색 ]', {
       fontSize:      scaledFontSize(13, scene.scale),
       fill:          '#7a5028',
       fontFamily:    FontManager.MONO,
@@ -138,7 +138,7 @@ class Tab_Explore {
 
     // ── 모두 container에 추가 ────────────────────────────────
     this._container.add([
-      panel, deco, lineG,
+      panel, deco, labelTxt, lineG,
       txt,
       btnGlow, btnBg, btnTxt, hit,
     ]);

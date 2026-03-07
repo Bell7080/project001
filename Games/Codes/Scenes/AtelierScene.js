@@ -25,6 +25,11 @@ class AtelierScene extends Phaser.Scene {
     this._buildHUD(W, H);
     this._sideButtonRefs = [];
     this._buildSideButtons(W, H);
+
+    // 영입 진행 중 탭 이동 차단
+    this.events.on('recruitLock', (locked) => {
+      this._recruitLocked = locked;
+    });
     this._buildTopButtons(W, H);
 
     this._currentTabObj = null;
@@ -70,6 +75,8 @@ class AtelierScene extends Phaser.Scene {
 
   _switchTab(key, instant = false) {
     if (!instant && key === this._activeTab && !this._welcomeObj) return;
+    // 영입 진행 중에는 탭 이동 불가
+    if (!instant && this._recruitLocked) return;
 
     const W = this.W;
     const H = this.H;
