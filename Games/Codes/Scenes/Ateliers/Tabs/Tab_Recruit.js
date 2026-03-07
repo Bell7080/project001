@@ -609,61 +609,120 @@ class Tab_Recruit {
     sep.lineBetween(cx - bw*0.38, cy - bh*0.16, cx + bw*0.38, cy - bh*0.16);
     this._container.add(sep);
 
+    // ── 이름 필드 (스탯 위, 구분선 바로 아래) ───────────────
+    this._buildNameField(cx, cy - bh*0.10, bw);
+
     this._statTexts = [];
     RECRUIT_STAT_LABELS.forEach((label, i) => {
-      const y = cy - bh*0.10 + i * (bh * 0.093);
+      const y = cy - bh*0.01 + i * (bh * 0.088);
       const t = scene.add.text(cx, y, `${label}  ${result.stats[i]}`, {
         fontSize: this._fs(11), fill: '#c8bfb0', fontFamily: FontManager.MONO,
       }).setOrigin(0.5);
       this._container.add(t);
       this._statTexts.push(t);
     });
-
-    this._buildNameField(cx, cy + bh*0.37, bw);
   }
 
   _buildNameField(cx, y, bw) {
     const { scene, result } = this;
-    const fW = bw * 0.80; const fH = 24;
+    const fW = bw * 0.80; const fH = parseInt(this._fs(22));
+
+    // 배경
     const fbg = scene.add.graphics();
-    const drawF = (hover) => {
+    this._nameFieldBg  = fbg;
+    this._nameFieldCx  = cx;
+    this._nameFieldY   = y;
+    this._nameFieldW   = fW;
+    this._nameFieldH   = fH;
+    this._nameEditing  = false;
+    this._nameBuffer   = result.name;
+    this._nameCursorOn = false;
+
+    const drawF = (state) => {
       fbg.clear();
-      fbg.fillStyle(0x1e1008, 1);
-      fbg.lineStyle(1, hover ? 0xa05018 : 0x3d2010, 1);
-      fbg.fillRect(cx-fW/2, y-fH/2, fW, fH);
-      fbg.strokeRect(cx-fW/2, y-fH/2, fW, fH);
+      fbg.fillStyle(state === 'edit' ? 0x2a1408 : 0x1e1008, 1);
+      fbg.lineStyle(1,
+        state === 'edit'  ? 0xc87030 :
+        state === 'hover' ? 0xa05018 : 0x3d2010, 1);
+      fbg.fillRect(cx - fW/2, y - fH/2, fW, fH);
+      fbg.strokeRect(cx - fW/2, y - fH/2, fW, fH);
     };
-    drawF(false);
+    this._drawNameField = drawF;
+    drawF('normal');
     this._container.add(fbg);
 
+    // 이름 텍스트 (커서 포함해서 표시)
     this._nameTxt = scene.add.text(cx, y, result.name, {
       fontSize: this._fs(12), fill: '#c8a070', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
     this._container.add(this._nameTxt);
 
-    const hit = scene.add.rectangle(cx, y, fW, fH, 0, 0).setInteractive({ useHandCursor: true });
+    // 히트 영역
+    const hit = scene.add.rectangle(cx, y, fW, fH, 0, 0)
+      .setInteractive({ useHandCursor: true });
     this._container.add(hit);
-    hit.on('pointerover',  () => drawF(true));
-    hit.on('pointerout',   () => drawF(false));
-    hit.on('pointerdown',  () => this._editName());
+    hit.on('pointerover',  () => { if (!this._nameEditing) drawF('hover'); });
+    hit.on('pointerout',   () => { if (!this._nameEditing) drawF('normal'); });
+    hit.on('pointerdown',  () => this._startNameEdit());
+
+    // 바깥 클릭으로 종료
+    scene.input.on('pointerdown', (ptr) => {
+      if (!this._nameEditing) return;
+      const dx = Math.abs(ptr.x - cx);
+      const dy = Math.abs(ptr.y - y);
+      if (dx > fW/2 || dy > fH/2) this._commitNameEdit();
+    });
   }
 
-  _editName() {
-    const { result } = this;
-    const el = document.createElement('input');
-    el.type = 'text'; el.value = result.name; el.maxLength = 10;
-    el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
-      'background:#0f0a05;color:#c8a070;border:1px solid #a05018;padding:4px 10px;' +
-      'font-size:16px;outline:none;z-index:9999;text-align:center;letter-spacing:2px;';
-    document.body.appendChild(el);
-    el.focus(); el.select();
-    const done = () => {
-      const v = el.value.trim();
-      if (v) { result.name = v; this._nameTxt.setText(v); }
-      document.body.removeChild(el);
+  _startNameEdit() {
+    if (this._nameEditing) return;
+    this._nameEditing  = true;
+    this._nameBuffer   = this.result.name;
+    this._drawNameField('edit');
+
+    // 커서 점멸 타이머
+    this._nameCursorTimer = this.scene.time.addEvent({
+      delay: 500, loop: true,
+      callback: () => {
+        if (!this._nameEditing) return;
+        this._nameCursorOn = !this._nameCursorOn;
+        this._refreshNameTxt();
+      },
+    });
+
+    // 키보드 입력 수신
+    this._nameKeyHandler = (evt) => {
+      if (!this._nameEditing) return;
+      const key = evt.key;
+      if (key === 'Enter' || key === 'Escape') {
+        this._commitNameEdit();
+      } else if (key === 'Backspace') {
+        if (this._nameBuffer.length > 0)
+          this._nameBuffer = [...this._nameBuffer].slice(0, -1).join('');
+        this._refreshNameTxt();
+      } else if (key.length === 1 && this._nameBuffer.length < 10) {
+        this._nameBuffer += key;
+        this._refreshNameTxt();
+      }
     };
-    el.addEventListener('blur', done);
-    el.addEventListener('keydown', e => { if (e.key === 'Enter') done(); });
+    window.addEventListener('keydown', this._nameKeyHandler);
+    this._refreshNameTxt();
+  }
+
+  _refreshNameTxt() {
+    const cursor = this._nameEditing && this._nameCursorOn ? '|' : '';
+    this._nameTxt.setText(this._nameBuffer + cursor);
+  }
+
+  _commitNameEdit() {
+    if (!this._nameEditing) return;
+    this._nameEditing = false;
+    if (this._nameCursorTimer) { this._nameCursorTimer.remove(); this._nameCursorTimer = null; }
+    if (this._nameKeyHandler)  { window.removeEventListener('keydown', this._nameKeyHandler); this._nameKeyHandler = null; }
+    const v = this._nameBuffer.trim();
+    if (v) { this.result.name = v; } else { this._nameBuffer = this.result.name; }
+    this._nameTxt.setText(this.result.name);
+    this._drawNameField('normal');
   }
 
   // ── 오른쪽: 커스터마이징 ──────────────────────────────────────
