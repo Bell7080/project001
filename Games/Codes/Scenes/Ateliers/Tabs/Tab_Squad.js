@@ -13,12 +13,22 @@ class Tab_Squad {
     const raw = CharacterManager.loadSquad();
     this._squad = this._migrateSquad(raw);
 
-    this._selectedSlot  = null;
     this._filterJob     = 'all';
     this._filterCog     = 'all';
     this._sliderOffset  = 0;
     this._sliderDragged = false;
     this._filterBarObjs = [];
+
+    // 드래그 앤 드롭 상태
+    this._dragGhost      = null;
+    this._dragCharId     = null;
+    this._dragTargetIdx  = null;
+    this._glowGraphics   = null;
+
+    // 프로필 팝업 상태
+    this._squadPopupGroup   = null;
+    this._squadPopupOverlay = null;
+    this._squadOpenCharId   = null;
 
     this._build();
   }
@@ -37,9 +47,9 @@ class Tab_Squad {
     const { scene, W, H } = this;
 
     const panelX = W * 0.20;
-    const panelY = H * 0.22;
+    const panelY = H * 0.10;   // DAY/Arc 바 아래 바로 시작
     const panelW = W * 0.60;
-    const panelH = H * 0.55;
+    const panelH = H * 0.72;   // 더 길게
 
     const bg = scene.add.graphics();
     bg.fillStyle(0x0d0a06, 0.97);
@@ -52,7 +62,9 @@ class Tab_Squad {
       fontSize: scaledFontSize(12, scene.scale), fill: '#5a3818', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
 
-    this._hintText = scene.add.text(panelX + panelW - 16, panelY + 16, '', {
+    // 힌트 텍스트 (우상단)
+    this._hintText = scene.add.text(panelX + panelW - 16, panelY + 16,
+      '카드를 칸에 드래그하여 배치  ·  배치된 칸 클릭으로 회수', {
       fontSize: scaledFontSize(9, scene.scale), fill: '#8a5020', fontFamily: FontManager.MONO,
     }).setOrigin(1, 0);
     this._container.add(this._hintText);
@@ -62,12 +74,12 @@ class Tab_Squad {
     this._buildFilters(panelX, panelW, this._filterY);
 
     // ── 격자
-    const gridSize = Math.min(panelW * 0.42, panelH * 0.40);
+    const gridSize = Math.min(panelW * 0.54, panelH * 0.54);
     const cellSize = gridSize / 3;
 
     const cx    = panelX + panelW / 2;
     const gridX = cx - gridSize / 2;
-    const gridY = panelY + parseInt(scaledFontSize(48, scene.scale));
+    const gridY = panelY + parseInt(scaledFontSize(40, scene.scale));
 
     this._gridX    = gridX;
     this._gridY    = gridY;
@@ -77,13 +89,12 @@ class Tab_Squad {
     this._buildGrid(gridX, gridY, cellSize);
 
     // ── 슬라이더
-    const sliderTopY  = gridY + gridSize + parseInt(scaledFontSize(14, scene.scale));
-    const sliderBotY  = this._filterY - parseInt(scaledFontSize(8, scene.scale));
+    const sliderTopY  = gridY + gridSize + parseInt(scaledFontSize(3, scene.scale));
+    const sliderBotY  = this._filterY - parseInt(scaledFontSize(2, scene.scale));
     this._sliderAreaX = panelX + 10;
     this._sliderAreaY = sliderTopY;
     this._sliderAreaW = panelW - 20;
-    this._sliderAreaH = Math.max(parseInt(scaledFontSize(90, scene.scale)), sliderBotY - sliderTopY);
+    this._sliderAreaH = Math.max(parseInt(scaledFontSize(100, scene.scale)), sliderBotY - sliderTopY);
     this._buildSlider();
-    this._buildSliderDrag();
   }
 }

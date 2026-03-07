@@ -1,6 +1,6 @@
 // ================================================================
 //  Tab_Explore.js
-//  경로: Games/Codes/Scenes/Tab_Explore.js
+//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Explore.js
 // ================================================================
 
 class Tab_Explore {
@@ -9,6 +9,8 @@ class Tab_Explore {
     this.W = W;
     this.H = H;
     this._container = scene.add.container(0, 0);
+    this._timers = [];
+    this._tweens = [];
     this._build();
   }
 
@@ -46,7 +48,7 @@ class Tab_Explore {
 
     // ── 상단 라벨 ────────────────────────────────────────────
     const labelY = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
-    const label = scene.add.text(cx, labelY, '[ 탐  색 ]', {
+    scene.add.text(cx, labelY, '[ 탐  색 ]', {
       fontSize:      scaledFontSize(13, scene.scale),
       fill:          '#7a5028',
       fontFamily:    FontManager.MONO,
@@ -59,25 +61,27 @@ class Tab_Explore {
     lineG.lineStyle(1, 0x4a2a10, 0.9);
     lineG.lineBetween(cx - panelW / 2 + 20, lineY, cx + panelW / 2 - 20, lineY);
 
-    // ── 메인 텍스트 ──────────────────────────────────────────
-    const txt1 = scene.add.text(cx, cy - panelH * 0.10, '심해를  직면할', {
+    // ── 메인 텍스트 (처음엔 숨김 — 타이핑으로 등장) ──────────
+    const txt1 = scene.add.text(cx, cy - panelH * 0.10, '', {
       fontSize:   scaledFontSize(32, scene.scale),
       fill:       '#e8c080',
       fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setAlpha(0);
 
-    const txt2 = scene.add.text(cx, cy + panelH * 0.09, '준비가  되었습니까?', {
+    const txt2 = scene.add.text(cx, cy + panelH * 0.09, '', {
       fontSize:   scaledFontSize(32, scene.scale),
       fill:       '#e8c080',
       fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setAlpha(0);
 
-    // ── 확인 버튼 ────────────────────────────────────────────
+    // ── 확인 버튼 (처음엔 숨김) ──────────────────────────────
     const btnW = parseInt(scaledFontSize(130, scene.scale));
     const btnH = parseInt(scaledFontSize(50, scene.scale));
     const btnY = cy + panelH * 0.35;
 
-    const btnBg = scene.add.graphics();
+    const btnBg   = scene.add.graphics().setAlpha(0);
+    const btnGlow = scene.add.graphics().setAlpha(0);
+
     const drawBtn = (state) => {
       btnBg.clear();
       if (state === 'hover') {
@@ -95,11 +99,29 @@ class Tab_Explore {
     };
     drawBtn('normal');
 
+    // 글로우 그리기 (외부 발광 레이어)
+    const drawGlow = (intensity) => {
+      btnGlow.clear();
+      const layers = [
+        { pad: 14, alpha: 0.05 * intensity, col: 0xff2200 },
+        { pad:  8, alpha: 0.13 * intensity, col: 0xff3310 },
+        { pad:  4, alpha: 0.28 * intensity, col: 0xdd2200 },
+        { pad:  1, alpha: 0.52 * intensity, col: 0xcc1800 },
+      ];
+      layers.forEach(({ pad, alpha, col }) => {
+        btnGlow.lineStyle(2, col, alpha);
+        btnGlow.strokeRect(
+          cx - btnW / 2 - pad, btnY - btnH / 2 - pad,
+          btnW + pad * 2, btnH + pad * 2
+        );
+      });
+    };
+
     const btnTxt = scene.add.text(cx, btnY, '확  인', {
       fontSize:   scaledFontSize(24, scene.scale),
       fill:       '#ee5533',
       fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setAlpha(0);
 
     const hit = scene.add.rectangle(cx, btnY, btnW, btnH, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
@@ -123,12 +145,98 @@ class Tab_Explore {
     // ── 모두 container에 추가 ────────────────────────────────
     this._container.add([
       panel, deco, lineG,
-      label, txt1, txt2,
-      btnBg, btnTxt, hit,
+      txt1, txt2,
+      btnGlow, btnBg, btnTxt, hit,
     ]);
+
+    // ── 타이핑 시퀀스 시작 ───────────────────────────────────
+    this._delay(80, () => {
+      this._typeText(txt1, '심해를  직면할', 52, () => {
+        this._delay(160, () => {
+          this._typeText(txt2, '준비가  되었습니까?', 42, () => {
+            this._delay(180, () => {
+              this._revealButton(btnBg, btnGlow, btnTxt, drawBtn, drawGlow);
+            });
+          });
+        });
+      });
+    });
+  }
+
+  // ── 버튼 등장 애니메이션 ─────────────────────────────────────
+  _revealButton(btnBg, btnGlow, btnTxt, drawBtn, drawGlow) {
+    const { scene } = this;
+
+    // 버튼 배경 페이드인
+    this._tween({ targets: btnBg, alpha: { from: 0, to: 1 }, duration: 220 });
+
+    // 글로우 등장
+    this._delay(80, () => {
+      btnGlow.setAlpha(1);
+      const glowObj = { v: 0 };
+      this._tween({
+        targets: glowObj, v: 1, duration: 550, ease: 'Sine.easeOut',
+        onUpdate: () => drawGlow(glowObj.v),
+        onComplete: () => {
+          // 맥박 점멸
+          this._tween({
+            targets: glowObj,
+            v: { from: 1, to: 0.35 },
+            duration: 850,
+            yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            onUpdate: () => drawGlow(glowObj.v),
+          });
+        },
+      });
+    });
+
+    // 버튼 텍스트 페이드인 + 미세 점멸
+    this._delay(100, () => {
+      this._tween({ targets: btnTxt, alpha: { from: 0, to: 1 }, duration: 280 });
+      this._delay(300, () => {
+        this._tween({
+          targets: btnTxt, alpha: { from: 1, to: 0.65 },
+          duration: 850, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        });
+      });
+    });
+  }
+
+  // ── 타이핑 효과 ─────────────────────────────────────────────
+  _typeText(textObj, fullText, charDelay, onDone) {
+    textObj.setAlpha(1).setText('');
+    const chars = [...fullText];
+    let i = 0;
+    const tick = () => {
+      if (!textObj || !textObj.scene) return;
+      if (i < chars.length) {
+        textObj.setText(chars.slice(0, ++i).join(''));
+        this._timers.push(this.scene.time.delayedCall(charDelay, tick));
+      } else {
+        if (onDone) onDone();
+      }
+    };
+    this._timers.push(this.scene.time.delayedCall(charDelay, tick));
+  }
+
+  _delay(ms, fn) {
+    this._timers.push(this.scene.time.delayedCall(ms, fn));
+  }
+
+  _tween(cfg) {
+    const t = this.scene.tweens.add(cfg);
+    this._tweens.push(t);
+    return t;
   }
 
   show()    { this._container.setVisible(true);  }
   hide()    { this._container.setVisible(false); }
-  destroy() { this._container.destroy(); }
+
+  destroy() {
+    this._timers.forEach(t => { if (t && t.remove) t.remove(); });
+    this._tweens.forEach(t => { if (t && t.stop)   t.stop();   });
+    this._timers = [];
+    this._tweens = [];
+    this._container.destroy();
+  }
 }
