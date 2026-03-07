@@ -12,103 +12,8 @@
 //    CharacterManager, SaveManager, scaledFontSize, FontManager
 // ================================================================
 
-// ─── 상수 ─────────────────────────────────────────────────────────
-
-const RECRUIT_GACHA_TABLE = [
-  { weight: 10, min:   0, max:  14 },
-  { weight:  9, min:  15, max:  29 },
-  { weight:  8, min:  30, max:  44 },
-  { weight:  7, min:  45, max:  59 },
-  { weight:  6, min:  60, max:  74 },
-  { weight:  5, min:  75, max:  89 },
-  { weight:  4, min:  90, max: 109 },
-  { weight:  3, min: 110, max: 139 },
-  { weight:  2, min: 140, max: 189 },
-  { weight:  1, min: 190, max: 250 },
-];
-
-const RECRUIT_STAT_MINS   = [1, 0, 1, 5, 0];
-const RECRUIT_STAT_LABELS = ['체력', '건강', '공격', '민첩', '행운'];
-const RECRUIT_STAT_KEYS   = ['hp', 'health', 'attack', 'agility', 'luck'];
-const RECRUIT_COG_TH      = [10, 25, 45, 65, 80, 95];
-
-const RECRUIT_PASSIVE_POOL = {
-  1: ['윗칸 타격', '앞칸 타격'],
-  2: ['앞칸 타격', '현재 칸 타격'],
-  3: ['현재 칸 타격', '대각 타격', '윗칸 타격'],
-  4: ['전열 전체 타격', '대각 타격', '앞칸 타격'],
-  5: ['전열 전체 타격', '현재 칸 타격', '후열 타격'],
-  6: ['전/후열 동시 타격', '후열 타격', '전열 전체 타격'],
-  7: ['전체 칸 타격', '전/후열 동시 타격'],
-};
-const RECRUIT_SKILL_POOL = {
-  1: ['기본 일격', '빠른 찌르기'],
-  2: ['연속 타격', '방어 자세'],
-  3: ['강타', '회피 기동', '독 도포'],
-  4: ['광역 타격', '강화 독', '순간 가속'],
-  5: ['폭발 타격', '전방 스캔', '철갑 관통'],
-  6: ['심해 압박', '전기 충격', '철벽 방어'],
-  7: ['코어 오버로드', '심연의 포효'],
-};
-const RECRUIT_NAMES = {
-  fisher: ['강철손','갈고리','파도잡이','심해꾼','녹슨낚시','소금쟁이','파랑이','먹장어','심연꾼','날카로운눈'],
-  diver:  ['잠수사','깊은숨','해류','침잠자','해저인','투명수','녹색폐','어둠잠수','산소통','어비스'],
-};
-const RECRUIT_JOB_LABEL = { fisher: '낚시꾼', diver: '잠수부' };
-const RECRUIT_JOBS      = ['fisher', 'diver'];
-
-const RECRUIT_BASE_PRICE   = 5;
-const RECRUIT_PRICE_STEP   = 5;
-const RECRUIT_MAX_REROLL   = 3;
-const RECRUIT_SLOT_TICK    = 55;
-const RECRUIT_SLOT_COUNT   = 30;
-const RECRUIT_SPRITE_COUNT = 72;
-
-// ─── 유틸 ─────────────────────────────────────────────────────────
-
-function _rWPick(table) {
-  const total = table.reduce((s, e) => s + e.weight, 0);
-  let r = Math.random() * total;
-  for (const e of table) { r -= e.weight; if (r <= 0) return e; }
-  return table[table.length - 1];
-}
-
-function _rCog(sum) {
-  for (let i = 0; i < RECRUIT_COG_TH.length; i++) if (sum <= RECRUIT_COG_TH[i]) return i + 1;
-  return 7;
-}
-
-function _rDist(total) {
-  const s = [...RECRUIT_STAT_MINS];
-  let rem = total - s.reduce((a, b) => a + b, 0);
-  if (rem < 0) rem = 0;
-  for (let i = 0; i < rem; i++) s[Math.floor(Math.random() * 5)]++;
-  return s;
-}
-
-function _rFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
-
-function _rSpriteKey() {
-  return `char_${String(Math.floor(Math.random() * RECRUIT_SPRITE_COUNT)).padStart(3, '0')}`;
-}
-
-// 가챠 1회 결과 생성
-function _rRoll() {
-  const entry  = _rWPick(RECRUIT_GACHA_TABLE);
-  const statSum = entry.min + Math.floor(Math.random() * (entry.max - entry.min + 1));
-  const job    = _rFrom(RECRUIT_JOBS);
-  const cog    = _rCog(statSum);
-  return {
-    job, statSum, cog,
-    stats:     _rDist(statSum),
-    name:      _rFrom(RECRUIT_NAMES[job]),
-    spriteKey: _rSpriteKey(),
-    passive:   _rFrom(RECRUIT_PASSIVE_POOL[cog]),
-    skill:     _rFrom(RECRUIT_SKILL_POOL[cog]),
-  };
-}
-
 // ─── 메인 클래스 ──────────────────────────────────────────────────
+//  상수·유틸 함수는 Recruit_Data.js 참조
 
 class Tab_Recruit {
   constructor(scene, W, H) {
@@ -189,9 +94,9 @@ class Tab_Recruit {
     deco.lineBetween(px,  py2, px + cs, py2);  deco.lineBetween(px,  py2, px,  py2 - cs);
     deco.lineBetween(px2, py2, px2 - cs, py2); deco.lineBetween(px2, py2, px2, py2 - cs);
 
-    // ── [ 영  입 ] 라벨 ─────────────────────────────────────
+    // ── [ 영 입 ] 라벨 ────────────────────────────────────────
     const labelY = cy - panelH / 2 + parseInt(this._fs(26));
-    const recruitLabel = scene.add.text(cx, labelY, '[ 영  입 ]', {
+    scene.add.text(cx, labelY, '[ 영  입 ]', {
       fontSize: this._fs(13), fill: '#7a5028',
       fontFamily: FontManager.MONO, letterSpacing: 3,
     }).setOrigin(0.5);
@@ -273,7 +178,7 @@ class Tab_Recruit {
     hit.on('pointerdown',  () => { drawBtn('down');  btnTxt.setStyle({ fill: '#a07040' }); });
     hit.on('pointerup',    () => this._onHire(cx, cy, panelW, panelH));
 
-    this._container.add([panel, deco, recruitLabel, lineG, txt, priceLabel, priceTxt, btnGlow, btnBg, btnTxt, hit]);
+    this._container.add([panel, deco, lineG, txt, priceLabel, priceTxt, btnGlow, btnBg, btnTxt, hit]);
 
     // ── 타이핑 → 버튼 등장 ────────────────────────────────────
     this._delay(80, () => {
@@ -334,17 +239,33 @@ class Tab_Recruit {
   //  결제
   // ════════════════════════════════════════════════════════════════
 
-  _onHire(cx, cy, panelW, panelH) {
-    const save = SaveManager.load() || {};
-    if ((save.arc ?? 0) < this.price) { this._toast('Arc 부족!'); return; }
+  // ── 탭 버튼 잠금/해제 ─────────────────────────────────────────
+  // AtelierScene._sideButtonRefs 의 btn 들을 직접 껐다 켜서 차단하고
+  // 검은 반투명 오버레이로 시각적으로도 잠금 표시
+  _lockTabs() {
+    // 버튼 interactive 비활성화
+    const refs = this.scene._sideButtonRefs || [];
+    refs.forEach(({ btn }) => btn.disableInteractive());
 
-    save.arc -= this.price;
-    this.price += RECRUIT_PRICE_STEP;
-    save.recruitPrice = this.price;
-    SaveManager.save(save);
-    this.scene.events.emit('arcUpdated', save.arc);
+    // 검은 반투명 오버레이 (슬롯/커스텀 UI보다 아래, 탭 버튼보다 위)
+    if (!this._lockOverlay) {
+      this._lockOverlay = this.scene.add.rectangle(0, 0, this.W, this.H, 0x000000, 0.55)
+        .setOrigin(0).setDepth(10);
+      this._container.setDepth(11);
+    }
+  }
 
-    this._buildSlot();
+  _unlockTabs() {
+    // 버튼 interactive 복구
+    const refs = this.scene._sideButtonRefs || [];
+    refs.forEach(({ btn }) => btn.setInteractive({ useHandCursor: true }));
+
+    // 오버레이 제거
+    if (this._lockOverlay) {
+      this._lockOverlay.destroy();
+      this._lockOverlay = null;
+    }
+    this._container.setDepth(0);
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -527,9 +448,8 @@ class Tab_Recruit {
       this._container.add(iBg);
 
       // Cog 등급
-      const cogColors = ['','#9ab890','#90a8c8','#c8c070','#c89050','#c85050','#b030b0','#ff2020'];
       this._container.add(scene.add.text(x, iY, `Cog  ${roll.cog}`, {
-        fontSize: this._fs(12), fill: cogColors[roll.cog] || '#c8bfb0',
+        fontSize: this._fs(12), fill: RECRUIT_COG_COLORS[roll.cog] || '#c8bfb0',
         fontStyle: 'bold', fontFamily: FontManager.MONO,
       }).setOrigin(0.5));
 
@@ -609,120 +529,61 @@ class Tab_Recruit {
     sep.lineBetween(cx - bw*0.38, cy - bh*0.16, cx + bw*0.38, cy - bh*0.16);
     this._container.add(sep);
 
-    // ── 이름 필드 (스탯 위, 구분선 바로 아래) ───────────────
-    this._buildNameField(cx, cy - bh*0.10, bw);
-
     this._statTexts = [];
     RECRUIT_STAT_LABELS.forEach((label, i) => {
-      const y = cy - bh*0.01 + i * (bh * 0.088);
+      const y = cy - bh*0.10 + i * (bh * 0.093);
       const t = scene.add.text(cx, y, `${label}  ${result.stats[i]}`, {
         fontSize: this._fs(11), fill: '#c8bfb0', fontFamily: FontManager.MONO,
       }).setOrigin(0.5);
       this._container.add(t);
       this._statTexts.push(t);
     });
+
+    this._buildNameField(cx, cy + bh*0.37, bw);
   }
 
   _buildNameField(cx, y, bw) {
     const { scene, result } = this;
-    const fW = bw * 0.80; const fH = parseInt(this._fs(22));
-
-    // 배경
+    const fW = bw * 0.80; const fH = 24;
     const fbg = scene.add.graphics();
-    this._nameFieldBg  = fbg;
-    this._nameFieldCx  = cx;
-    this._nameFieldY   = y;
-    this._nameFieldW   = fW;
-    this._nameFieldH   = fH;
-    this._nameEditing  = false;
-    this._nameBuffer   = result.name;
-    this._nameCursorOn = false;
-
-    const drawF = (state) => {
+    const drawF = (hover) => {
       fbg.clear();
-      fbg.fillStyle(state === 'edit' ? 0x2a1408 : 0x1e1008, 1);
-      fbg.lineStyle(1,
-        state === 'edit'  ? 0xc87030 :
-        state === 'hover' ? 0xa05018 : 0x3d2010, 1);
-      fbg.fillRect(cx - fW/2, y - fH/2, fW, fH);
-      fbg.strokeRect(cx - fW/2, y - fH/2, fW, fH);
+      fbg.fillStyle(0x1e1008, 1);
+      fbg.lineStyle(1, hover ? 0xa05018 : 0x3d2010, 1);
+      fbg.fillRect(cx-fW/2, y-fH/2, fW, fH);
+      fbg.strokeRect(cx-fW/2, y-fH/2, fW, fH);
     };
-    this._drawNameField = drawF;
-    drawF('normal');
+    drawF(false);
     this._container.add(fbg);
 
-    // 이름 텍스트 (커서 포함해서 표시)
     this._nameTxt = scene.add.text(cx, y, result.name, {
       fontSize: this._fs(12), fill: '#c8a070', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
     this._container.add(this._nameTxt);
 
-    // 히트 영역
-    const hit = scene.add.rectangle(cx, y, fW, fH, 0, 0)
-      .setInteractive({ useHandCursor: true });
+    const hit = scene.add.rectangle(cx, y, fW, fH, 0, 0).setInteractive({ useHandCursor: true });
     this._container.add(hit);
-    hit.on('pointerover',  () => { if (!this._nameEditing) drawF('hover'); });
-    hit.on('pointerout',   () => { if (!this._nameEditing) drawF('normal'); });
-    hit.on('pointerdown',  () => this._startNameEdit());
-
-    // 바깥 클릭으로 종료
-    scene.input.on('pointerdown', (ptr) => {
-      if (!this._nameEditing) return;
-      const dx = Math.abs(ptr.x - cx);
-      const dy = Math.abs(ptr.y - y);
-      if (dx > fW/2 || dy > fH/2) this._commitNameEdit();
-    });
+    hit.on('pointerover',  () => drawF(true));
+    hit.on('pointerout',   () => drawF(false));
+    hit.on('pointerdown',  () => this._editName());
   }
 
-  _startNameEdit() {
-    if (this._nameEditing) return;
-    this._nameEditing  = true;
-    this._nameBuffer   = this.result.name;
-    this._drawNameField('edit');
-
-    // 커서 점멸 타이머
-    this._nameCursorTimer = this.scene.time.addEvent({
-      delay: 500, loop: true,
-      callback: () => {
-        if (!this._nameEditing) return;
-        this._nameCursorOn = !this._nameCursorOn;
-        this._refreshNameTxt();
-      },
-    });
-
-    // 키보드 입력 수신
-    this._nameKeyHandler = (evt) => {
-      if (!this._nameEditing) return;
-      const key = evt.key;
-      if (key === 'Enter' || key === 'Escape') {
-        this._commitNameEdit();
-      } else if (key === 'Backspace') {
-        if (this._nameBuffer.length > 0)
-          this._nameBuffer = [...this._nameBuffer].slice(0, -1).join('');
-        this._refreshNameTxt();
-      } else if (key.length === 1 && this._nameBuffer.length < 10) {
-        this._nameBuffer += key;
-        this._refreshNameTxt();
-      }
+  _editName() {
+    const { result } = this;
+    const el = document.createElement('input');
+    el.type = 'text'; el.value = result.name; el.maxLength = 10;
+    el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);' +
+      'background:#0f0a05;color:#c8a070;border:1px solid #a05018;padding:4px 10px;' +
+      'font-size:16px;outline:none;z-index:9999;text-align:center;letter-spacing:2px;';
+    document.body.appendChild(el);
+    el.focus(); el.select();
+    const done = () => {
+      const v = el.value.trim();
+      if (v) { result.name = v; this._nameTxt.setText(v); }
+      document.body.removeChild(el);
     };
-    window.addEventListener('keydown', this._nameKeyHandler);
-    this._refreshNameTxt();
-  }
-
-  _refreshNameTxt() {
-    const cursor = this._nameEditing && this._nameCursorOn ? '|' : '';
-    this._nameTxt.setText(this._nameBuffer + cursor);
-  }
-
-  _commitNameEdit() {
-    if (!this._nameEditing) return;
-    this._nameEditing = false;
-    if (this._nameCursorTimer) { this._nameCursorTimer.remove(); this._nameCursorTimer = null; }
-    if (this._nameKeyHandler)  { window.removeEventListener('keydown', this._nameKeyHandler); this._nameKeyHandler = null; }
-    const v = this._nameBuffer.trim();
-    if (v) { this.result.name = v; } else { this._nameBuffer = this.result.name; }
-    this._nameTxt.setText(this.result.name);
-    this._drawNameField('normal');
+    el.addEventListener('blur', done);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter') done(); });
   }
 
   // ── 오른쪽: 커스터마이징 ──────────────────────────────────────
@@ -741,13 +602,10 @@ class Tab_Recruit {
     iBg.fillStyle(0x1e1008, 1); iBg.lineStyle(1, 0x3d2010, 1);
     iBg.fillRect(cx-iSz/2, iY-iSz/2, iSz, iSz); iBg.strokeRect(cx-iSz/2, iY-iSz/2, iSz, iSz);
     this._container.add(iBg);
-    this._spriteBoxX  = cx;
-    this._spriteBoxY  = iY;
-    this._spriteBoxSz = iSz;
-    // 스프라이트 이미지 or 번호 텍스트
-    this._spriteImg = null;
-    this._spriteKeyTxt = null;
-    this._renderSpriteBox(result.spriteKey);
+    this._spriteKeyTxt = scene.add.text(cx, iY, `#${parseInt(result.spriteKey.replace('char_',''))+1}`, {
+      fontSize: this._fs(11), fill: '#3d2010', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5);
+    this._container.add(this._spriteKeyTxt);
 
     this._spriteBtn = this._makeRerollBtn(cx, iY + iSz*0.58, bw*0.70,
       `외형  🎲  ${this.rerolls.sprite}`, () => this._rerollSprite());
@@ -799,32 +657,6 @@ class Tab_Recruit {
     cfHit.on('pointerdown',  () => this._confirmHire());
   }
 
-  // 외형 박스 내용 렌더링 (이미지 or 번호 텍스트)
-  _renderSpriteBox(spriteKey) {
-    const { scene } = this;
-    const cx  = this._spriteBoxX;
-    const iY  = this._spriteBoxY;
-    const iSz = this._spriteBoxSz;
-
-    // 기존 이미지/텍스트 제거
-    if (this._spriteImg)    { this._spriteImg.destroy();    this._spriteImg    = null; }
-    if (this._spriteKeyTxt) { this._spriteKeyTxt.destroy(); this._spriteKeyTxt = null; }
-
-    if (spriteKey && scene.textures.exists(spriteKey)) {
-      const img = scene.add.image(cx, iY, spriteKey).setOrigin(0.5);
-      const sc  = Math.min(iSz / img.width, iSz / img.height) * 0.92;
-      img.setScale(sc);
-      this._spriteImg = img;
-      this._container.add(img);
-    } else {
-      const num = parseInt(spriteKey.replace('char_','')) + 1;
-      this._spriteKeyTxt = scene.add.text(cx, iY, `#${num}`, {
-        fontSize: this._fs(11), fill: '#3d2010', fontFamily: FontManager.MONO,
-      }).setOrigin(0.5);
-      this._container.add(this._spriteKeyTxt);
-    }
-  }
-
   _makeRerollBtn(cx, y, w, label, cb) {
     const { scene } = this;
     const h = 22;
@@ -862,6 +694,7 @@ class Tab_Recruit {
     if (this.rerolls.stat <= 0) { this._toast('재설정 횟수 소진'); return; }
     const prev = [...this.result.stats];
     const next = _rDist(this.result.statSum);
+    // _showStatPopup (Recruit_Popup.js) — 커스텀 화면 위에 전용 비교 팝업
     this._showStatPopup(prev, next, (chosen) => {
       this.result.stats = chosen; this.rerolls.stat--;
       chosen.forEach((v,i) => this._statTexts[i].setText(`${RECRUIT_STAT_LABELS[i]}  ${v}`));
@@ -879,7 +712,7 @@ class Tab_Recruit {
       `외형  #${parseInt(next.replace('char_',''))+1}`,
       (chosen) => {
         this.result.spriteKey = chosen; this.rerolls.sprite--;
-        this._renderSpriteBox(chosen);
+        this._spriteKeyTxt.setText(`#${parseInt(chosen.replace('char_',''))+1}`);
         if (this.rerolls.sprite <= 0) this._disableBtn(this._spriteBtn, '외형  ✕');
         else this._spriteBtn.txt.setText(`외형  🎲  ${this.rerolls.sprite}`);
       }, [prev, next]);
@@ -918,7 +751,7 @@ class Tab_Recruit {
     const cx = W/2; const cy = H/2;
     const pw = W*0.42; const ph = H*0.26;
 
-    const pop = scene.add.container(0, 0).setDepth(50);
+    const pop = scene.add.container(0, 0);
     this._container.add(pop);
 
     pop.add(scene.add.rectangle(cx, cy, W, H, 0x000000, 0.55));
@@ -963,172 +796,13 @@ class Tab_Recruit {
     makeBtn(lx, '유  지', prevLabel, false, rawValues ? rawValues[0] : prevLabel);
     makeBtn(rx, '새로운', nextLabel, true,  rawValues ? rawValues[1] : nextLabel);
 
-  }
-
-  // ════════════════════════════════════════════════════════════════
-  //  스탯 재설정 팝업 (전용)
-  //  - 오버레이 + 두 패널 (이전 / 변경)
-  //  - 패널 클릭 → 발광 → 한 번 더 클릭 → 확정
-  //  - x 버튼 없음 (반드시 하나를 선택해야 닫힘)
-  // ════════════════════════════════════════════════════════════════
-
-  _showStatPopup(prevStats, nextStats, onConfirm) {
-    const { scene, W, H } = this;
-    const cx = W / 2;
-    const cy = H / 2;
-
-    // ── 씬 직접 오버레이 ─────────────────────────────────────
-    const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0.80)
-      .setOrigin(0).setDepth(80);
-
-    // ── 팝업 컨테이너 (박스 두 개만) ─────────────────────────
-    const pop = scene.add.container(0, 0).setDepth(81);
-
-    // ── 두 패널 크기/위치 (화면 중앙 정렬) ───────────────────
-    const bW  = W * 0.26;
-    const bH  = H * 0.48;
-    const gap = W * 0.04;
-    const lx  = cx - bW/2 - gap/2;
-    const rx  = cx + bW/2 + gap/2;
-    const bY  = cy;
-    const rowH = bH / (RECRUIT_STAT_LABELS.length + 1.5);
-
-    let selectedSide = null;  // 'prev' | 'next'
-
-    const makeStatPanel = (panelX, stats, isPrev) => {
-      const side   = isPrev ? 'prev' : 'next';
-      const panelG = scene.add.graphics();
-      const glowG  = scene.add.graphics();
-
-      const drawPanel = (state) => {
-        panelG.clear();
-        glowG.clear();
-
-        // state: 'normal' | 'hover' | 'selected'
-        if (state === 'selected') {
-          panelG.fillStyle(isPrev ? 0x1a1206 : 0x0e1a08, 1);
-          panelG.lineStyle(2, isPrev ? 0xc8a030 : 0x40c840, 1);
-          // 발광 레이어
-          [
-            { pad: 12, a: 0.07, c: isPrev ? 0xc8a030 : 0x30c830 },
-            { pad:  7, a: 0.18, c: isPrev ? 0xc8a030 : 0x30c830 },
-            { pad:  3, a: 0.35, c: isPrev ? 0xb08020 : 0x20b820 },
-            { pad:  1, a: 0.60, c: isPrev ? 0x906010 : 0x10a010 },
-          ].forEach(({ pad, a, c }) => {
-            glowG.lineStyle(2, c, a);
-            glowG.strokeRect(panelX - bW/2 - pad, bY - bH/2 - pad, bW + pad*2, bH + pad*2);
-          });
-        } else if (state === 'hover') {
-          panelG.fillStyle(0x1a1208, 1);
-          panelG.lineStyle(1, 0x5a3010, 0.9);
-        } else {
-          panelG.fillStyle(0x120d07, 1);
-          panelG.lineStyle(1, 0x2a1a08, 0.7);
-        }
-        panelG.fillRect(panelX - bW/2, bY - bH/2, bW, bH);
-        panelG.strokeRect(panelX - bW/2, bY - bH/2, bW, bH);
-      };
-
-      drawPanel('normal');
-      pop.add(glowG);
-      pop.add(panelG);
-
-      // 헤더 라벨
-      pop.add(scene.add.text(panelX, bY - bH*0.44,
-        isPrev ? '◀  현재 스탯' : '새로운 스탯  ▶', {
-        fontSize: this._fs(12), fill: isPrev ? '#c8a060' : '#60c860',
-        fontFamily: FontManager.MONO, letterSpacing: 2,
-      }).setOrigin(0.5));
-
-      // 구분선
-      const hlineG = scene.add.graphics();
-      hlineG.lineStyle(1, 0x2a1808, 0.7);
-      hlineG.lineBetween(panelX - bW*0.42, bY - bH*0.36, panelX + bW*0.42, bY - bH*0.36);
-      pop.add(hlineG);
-
-      // 스탯 행들
-      RECRUIT_STAT_LABELS.forEach((label, i) => {
-        const ry  = bY - bH*0.28 + i * rowH;
-        const val = stats[i];
-        const diff = val - prevStats[i];   // 현재 패널(prev)이면 0, next면 차이값
-
-        // 스탯 이름
-        pop.add(scene.add.text(panelX - bW*0.38, ry, label, {
-          fontSize: this._fs(13), fill: '#a08060',
-          fontFamily: FontManager.MONO,
-        }).setOrigin(0, 0.5));
-
-        // 스탯 수치
-        pop.add(scene.add.text(panelX + bW*0.10, ry, String(val), {
-          fontSize: this._fs(15), fill: '#e8d4a0',
-          fontFamily: FontManager.MONO, fontStyle: 'bold',
-        }).setOrigin(0.5, 0.5));
-
-        // 차이 표시 (next 패널만)
-        if (!isPrev && diff !== 0) {
-          const arrow = diff > 0 ? '▲' : '▼';
-          const col   = diff > 0 ? '#50e050' : '#e05050';
-          pop.add(scene.add.text(panelX + bW*0.38, ry,
-            `${arrow} ${Math.abs(diff)}`, {
-            fontSize: this._fs(13), fill: col,
-            fontFamily: FontManager.MONO,
-          }).setOrigin(1, 0.5));
-        }
-      });
-
-      // 히트 영역
-      const hit = scene.add.rectangle(panelX, bY, bW, bH, 0, 0)
-        .setInteractive({ useHandCursor: true });
-      pop.add(hit);
-
-      hit.on('pointerover', () => {
-        if (selectedSide !== side) drawPanel('hover');
-      });
-      hit.on('pointerout', () => {
-        if (selectedSide !== side) drawPanel('normal');
-      });
-      // pointerdown은 prevPanel/nextPanel 생성 후 아래에서 등록
-
-      return { drawPanel, hit };
-    };
-
-    const prevPanel = makeStatPanel(lx, prevStats, true);
-    const nextPanel = makeStatPanel(rx, nextStats, false);
-
-    // otherDraw 패치 — 히트박스 pointerdown 재등록
-    prevPanel.hit.removeAllListeners();
-    prevPanel.hit.on('pointerover', () => {
-      if (selectedSide !== 'prev') prevPanel.drawPanel('hover');
-    });
-    prevPanel.hit.on('pointerout', () => {
-      if (selectedSide !== 'prev') prevPanel.drawPanel('normal');
-    });
-    prevPanel.hit.on('pointerdown', () => {
-      if (selectedSide === 'prev') {
-        overlay.destroy(); pop.destroy(); onConfirm(prevStats);
-      } else {
-        selectedSide = 'prev';
-        prevPanel.drawPanel('selected');
-        nextPanel.drawPanel('normal');
-      }
-    });
-
-    nextPanel.hit.removeAllListeners();
-    nextPanel.hit.on('pointerover', () => {
-      if (selectedSide !== 'next') nextPanel.drawPanel('hover');
-    });
-    nextPanel.hit.on('pointerout', () => {
-      if (selectedSide !== 'next') nextPanel.drawPanel('normal');
-    });
-    nextPanel.hit.on('pointerdown', () => {
-      if (selectedSide === 'next') {
-        overlay.destroy(); pop.destroy(); onConfirm(nextStats);
-      } else {
-        selectedSide = 'next';
-        nextPanel.drawPanel('selected');
-        prevPanel.drawPanel('normal');
-      }
-    });
+    const xt = scene.add.text(cx + pw*0.44, cy - ph*0.42, '✕', {
+      fontSize: this._fs(11), fill: '#4a2a10', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    pop.add(xt);
+    xt.on('pointerover',  () => xt.setStyle({ fill: '#c8bfb0' }));
+    xt.on('pointerout',   () => xt.setStyle({ fill: '#4a2a10' }));
+    xt.on('pointerdown',  () => { pop.destroy(); onConfirm(rawValues ? rawValues[0] : prevLabel); });
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -1157,7 +831,10 @@ class Tab_Recruit {
     });
 
     this._toast(`${result.name}  영입 완료!`);
-    this._delay(900, () => this._buildReady());
+    this._delay(900, () => {
+      this._unlockTabs();
+      this._buildReady();
+    });
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -1171,7 +848,7 @@ class Tab_Recruit {
       fontFamily: FontManager.MONO,
       backgroundColor: '#1e1008',
       padding: { x: 12, y: 5 },
-    }).setOrigin(0.5).setDepth(60);
+    }).setOrigin(0.5).setDepth(65); // lockOverlay(50)·statPopup(60/61) 모두 위
     scene.tweens.add({
       targets: tx, alpha: 0, y: tx.y - 20,
       duration: 700, delay: 800,
