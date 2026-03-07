@@ -49,7 +49,7 @@ const CharacterManager = (() => {
     for(let i=0;i<remain;i++) b[Math.floor(Math.random()*5)]++;
     return{hp:mins[0]+b[0],health:mins[1]+b[1],attack:mins[2]+b[2],agility:mins[3]+b[3],luck:mins[4]+b[4]};
   }
-  const SPRITE_COUNT = 78; // char_000 ~ char_077
+  const SPRITE_COUNT = 72; // char_000 ~ char_071
   function randSpriteKey() {
     const n = Math.floor(Math.random() * SPRITE_COUNT);
     return `char_${String(n).padStart(3,'0')}`;
@@ -80,9 +80,15 @@ const CharacterManager = (() => {
   function initIfEmpty(){
     const ex=loadAll();
     if(ex && ex.length>0) {
-      // 구버전 데이터에 spriteKey 없으면 채워줌
+      // 구버전 데이터에 spriteKey 없거나 범위 초과면 재할당
       let dirty = false;
-      ex.forEach(c => { if (!c.spriteKey) { c.spriteKey = randSpriteKey(); dirty = true; } });
+      ex.forEach(c => {
+        const idx = parseInt((c.spriteKey || '').replace('char_', ''), 10);
+        if (!c.spriteKey || isNaN(idx) || idx >= SPRITE_COUNT) {
+          c.spriteKey = randSpriteKey();
+          dirty = true;
+        }
+      });
       if (dirty) saveAll(ex);
       return ex;
     }

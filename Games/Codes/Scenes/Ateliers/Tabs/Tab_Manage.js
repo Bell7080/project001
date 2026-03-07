@@ -58,13 +58,20 @@ class Tab_Manage {
     const availW     = panelW - 24;
     const cols       = Math.floor((availW + cardGap) / (cardW + cardGap));
 
+    // 카드 영역 높이 = 패널 하단 안내문구 위까지 최대한 활용
+    const infoLineH  = parseInt(scaledFontSize(24, scene.scale));
+    const cardAreaH  = panelH
+      - (gridStartY - panelY)   // 헤더 높이
+      - infoLineH               // 하단 안내 문구 높이
+      - cardGap;                // 여백
+
     this._gridCols   = cols;
     this._gridStartX = gridStartX;
     this._gridStartY = gridStartY;
     this._cardAreaX  = gridStartX;
     this._cardAreaY  = gridStartY;
     this._cardAreaW  = availW;
-    this._cardAreaH  = (cardH + cardGap) * 2 + cardGap;
+    this._cardAreaH  = cardAreaH;
 
     const maskGfx = scene.add.graphics();
     maskGfx.fillStyle(0xffffff, 1);
