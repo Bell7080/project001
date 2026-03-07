@@ -49,8 +49,8 @@ class Tab_Welcome {
     deco.lineBetween(px2, py2, px2, py2 - cs);
 
     // ── 상단 라벨 ───────────────────────────────────────────────
-    const labelY = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
-    scene.add.text(cx, labelY, '[ 환  영 ]', {
+    const labelY   = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
+    const labelTxt = scene.add.text(cx, labelY, '[ 환  영 ]', {
       fontSize:      scaledFontSize(13, scene.scale),
       fill:          '#7a5028',
       fontFamily:    FontManager.MONO,
@@ -64,9 +64,8 @@ class Tab_Welcome {
     lineG.lineBetween(cx - panelW / 2 + 20, lineY, cx + panelW / 2 - 20, lineY);
 
     // ── 환영 텍스트 (타이핑 등장) ──────────────────────────────
-    // 랜덤 표정 선택
-    const faces  = [':)', ':3', ':0'];
-    const face   = faces[Math.floor(Math.random() * faces.length)];
+    const faces   = [':)', ':3', ':0'];
+    const face    = faces[Math.floor(Math.random() * faces.length)];
     const fullTxt = `환영합니다 ${face}`;
 
     const txt = scene.add.text(cx, cy - panelH * 0.06, '', {
@@ -77,7 +76,7 @@ class Tab_Welcome {
 
     // ── container에 추가 ────────────────────────────────────────
     this._container.add([
-      panel, deco, lineG,
+      panel, deco, labelTxt, lineG,
       txt,
     ]);
 
