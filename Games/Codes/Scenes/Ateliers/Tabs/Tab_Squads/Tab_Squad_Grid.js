@@ -1,9 +1,11 @@
 // ================================================================
 //  Tab_Squad_Grid.js
-//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Squad_Grid.js
+//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Squads/Tab_Squad_Grid.js
 //
-//  배치 방식: 드래그 앤 드롭 (Tab_Squad_Slider.js에서 처리)
-//  셀 클릭: 배치된 캐릭터 회수
+//  역할: 탐사대 탭 — 3×3 배치 격자 + 잠수정 칸
+//        셀 클릭 시 마지막 캐릭터 회수
+//
+//  의존: Tab_Squad.js (prototype 확장)
 // ================================================================
 
 Object.assign(Tab_Squad.prototype, {
@@ -21,7 +23,7 @@ Object.assign(Tab_Squad.prototype, {
       }
     }
 
-    // 외곽선
+    // 격자 외곽선
     const outline = scene.add.graphics();
     outline.lineStyle(1, 0x6a3a18, 0.8);
     outline.strokeRect(gx, gy, cs * 3, cs * 3);
@@ -36,6 +38,7 @@ Object.assign(Tab_Squad.prototype, {
     this._subSize = subSize;
     this._gridCells.push(this._makeGridCell(9, subCx, subCy, subSize, chars, true));
 
+    // 잠수정 연결선
     const subLine = scene.add.graphics();
     subLine.lineStyle(1, 0x5a9aaa, 0.7);
     subLine.lineBetween(subCx + subSize / 2, subCy, gx, subCy);
@@ -157,7 +160,7 @@ Object.assign(Tab_Squad.prototype, {
           this._container.add(sep);
         }
 
-        // HP 미니바 (행 안쪽 하단)
+        // HP 미니바
         const hpPct = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
         const hpCol = hpPct > 0.6 ? 0x306030 : hpPct > 0.3 ? 0x806020 : 0x803020;
         const hpBH  = 2;
@@ -172,7 +175,7 @@ Object.assign(Tab_Squad.prototype, {
         hpFg2.fillRect(hpBX, hpBY, Math.max(1, Math.round(hpBW * hpPct)), hpBH);
         this._container.add([hpBg2, hpFg2]);
 
-        // 이름 텍스트
+        // 이름
         this._container.add(
           scene.add.text(cx, rowMid - 1, `${JOB_ABBR[char.job] || '?'}  ${char.name}`, {
             fontSize: scaledFontSize(6.5, scene.scale),
@@ -190,7 +193,7 @@ Object.assign(Tab_Squad.prototype, {
       }
     }
 
-    // 완전 빈 일반 셀: 슬롯 번호 + 안내 텍스트
+    // 빈 일반 셀: 슬롯 번호 + 안내
     if (!isSub && count === 0) {
       this._container.add(
         scene.add.text(cx, cy - parseInt(scaledFontSize(4, scene.scale)), `${idx + 1}`, {
@@ -215,19 +218,16 @@ Object.assign(Tab_Squad.prototype, {
       }).setOrigin(1, 0)
     );
 
-    // ── 히트 영역 (클릭 = 맨 마지막 캐릭터 회수) ─────────────────
+    // ── 히트 영역 (클릭 = 마지막 캐릭터 회수) ───────────────────
     const hit = scene.add.rectangle(cx, cy, size, size, 0, 0)
       .setInteractive({ useHandCursor: count > 0 });
     hit.on('pointerover', () => {
-      // 드래그 중이 아닐 때만 hover 효과
       if (!this._dragGhost) drawCell(true, false);
     });
     hit.on('pointerout',  () => drawCell(false, false));
     hit.on('pointerup',   () => {
-      if (this._dragGhost) return; // 드래그 중엔 무시
-      if (count > 0) {
-        this._removeLastFromSlot(idx);
-      }
+      if (this._dragGhost) return;
+      if (count > 0) this._removeLastFromSlot(idx);
     });
     this._container.add(hit);
 
@@ -251,12 +251,7 @@ Object.assign(Tab_Squad.prototype, {
     this._hintText.setText('카드를 칸에 드래그하여 배치  ·  배치된 칸 클릭으로 회수');
   },
 
-  _rebuildGrid() {
-    this._gridCells.forEach(cell =>
-      cell.drawCell(false, false)
-    );
-  },
-
+  // ── 격자 전체 재빌드 ─────────────────────────────────────────
   _rebuildGridFull() {
     this._gridCells.forEach(cell => { cell.cellBg.destroy(); cell.hit.destroy(); });
     this._gridCells = [];
