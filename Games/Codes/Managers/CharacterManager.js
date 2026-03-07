@@ -130,5 +130,13 @@ const CharacterManager = (() => {
     localStorage.setItem(SQUAD_KEY,JSON.stringify(normalized));
   }
 
-  return{initIfEmpty,loadAll,saveAll,createCharacter,calcCog,JOB_LABEL,loadSquad,saveSquad};
+  // Tab_Recruit에서 영입 확정 시 호출
+  // createCharacter()로 만든 포맷과 동일한 객체를 받아 nr_characters에 추가
+  function addCharacter(char) {
+    const chars = loadAll() || [];
+    chars.push(char);
+    saveAll(chars);
+  }
+
+  return{initIfEmpty,loadAll,saveAll,createCharacter,addCharacter,calcCog,JOB_LABEL,loadSquad,saveSquad};
 })();

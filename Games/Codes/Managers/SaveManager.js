@@ -55,6 +55,30 @@ const SaveManager = {
   load()       { return this._read(this.SAVE_KEY, null); },
   deleteSave() { localStorage.removeItem(this.SAVE_KEY); },
 
+  // 새 게임 시작 시 호출 — 기본 인게임 데이터 초기화
+  // arc: 999999 는 테스트용. 정식 빌드 시 0 으로 변경
+  newGame() {
+    const data = {
+      arc: 999999,
+      day: 1,
+      recruitPrice_fisher: 5,
+      recruitPrice_diver:  5,
+    };
+    this._write(this.SAVE_KEY, data);
+    return data;
+  },
+
+  // arc 단독 읽기 / 쓰기 (HUD, Tab_Recruit 등에서 사용)
+  getArc() {
+    const d = this.load();
+    return d ? (d.arc ?? 0) : 0;
+  },
+  setArc(value) {
+    const d = this.load() || {};
+    d.arc = value;
+    this._write(this.SAVE_KEY, d);
+  },
+
   // ── 설정 데이터 ───────────────────────────────────────────────
   saveSettings(patch) {
     const next = Object.assign({}, this.loadSettings(), patch);

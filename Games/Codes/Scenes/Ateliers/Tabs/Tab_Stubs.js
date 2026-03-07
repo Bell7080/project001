@@ -41,13 +41,7 @@ function makeStubTab(scene, W, H, title) {
   };
 }
 
-class Tab_Recruit {
-  constructor(scene, W, H) { this._tab = makeStubTab(scene, W, H, '영  입'); }
-  get _container() { return this._tab._container || null; }
-  show()    { this._tab.show();    }
-  hide()    { this._tab.hide();    }
-  destroy() { this._tab.destroy(); }
-}
+// Tab_Recruit → Games/Codes/Scenes/Atelier/tabs/Tab_Recruit.js 로 분리됨
 
 class Tab_Facility {
   constructor(scene, W, H) { this._tab = makeStubTab(scene, W, H, '시  설'); }

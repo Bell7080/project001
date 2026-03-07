@@ -246,7 +246,7 @@ class LobbyScene extends Phaser.Scene {
       case 'new':
         SaveManager.deleteSave();
         SaveManager.deleteStory();
-        SaveManager.save({ arc: 0 });
+        SaveManager.newGame();          // arc: 999999 (테스트용) + 영입 가격 초기화
         SaveManager.setProgress(1, 'start');
         this._transition(() => this.scene.start('LoadingScene', { next: 'AtelierScene' }));
         break;

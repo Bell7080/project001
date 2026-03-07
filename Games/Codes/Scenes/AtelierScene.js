@@ -75,6 +75,7 @@ class AtelierScene extends Phaser.Scene {
     const H = this.H;
 
     const TabMap = {
+      // Tab_Recruit → Games/Codes/Scenes/Atelier/tabs/Tab_Recruit.js (Tab_Stubs에서 분리)
       explore: Tab_Explore, recruit: Tab_Recruit, manage: Tab_Manage, squad: Tab_Squad,
       facility: Tab_Facility, outsource: Tab_Outsource, dredge: Tab_Dredge,
       shop: Tab_Shop, storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
