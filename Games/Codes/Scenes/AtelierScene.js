@@ -7,8 +7,9 @@ class AtelierScene extends Phaser.Scene {
   constructor() { super({ key: 'AtelierScene' }); }
 
   init(data) {
-    this._activeTab = data.tab || 'explore';
-    this._fromScene = data.from || 'LobbyScene';
+    this._activeTab  = data.tab  || 'explore';
+    this._fromScene  = data.from || 'LobbyScene';
+    this._skipWelcome = data.skipWelcome || false;
   }
 
   create() {
@@ -18,7 +19,7 @@ class AtelierScene extends Phaser.Scene {
     this.H = H;
 
     InputManager.reinit(this);
-    CharacterManager.initIfEmpty(); // 최초 실행 시 테스트 캐릭터 생성
+    CharacterManager.initIfEmpty();
 
     this._buildBackground(W, H);
     this._buildHUD(W, H);
@@ -28,6 +29,20 @@ class AtelierScene extends Phaser.Scene {
 
     this._currentTabObj = null;
     this._switchTab(this._activeTab, true);
+
+    // ── 웰컴 팝업 연동 ─────────────────────────────────────
+    // LobbyScene(새 게임 / 불러오기)에서 처음 진입할 때만 표시
+    // AtelierScene 내부 탭 전환 시에는 skipWelcome=true로 재시작하므로 표시 안 함
+    if (!this._skipWelcome && this._fromScene === 'LobbyScene') {
+      this._showWelcome();
+    }
+  }
+
+  // ── 웰컴 팝업 표시 ──────────────────────────────────────────
+  _showWelcome() {
+    new Tab_Welcome(this, this.W, this.H, () => {
+      // 팝업이 닫힌 뒤 별도 처리가 필요하면 여기에 추가
+    });
   }
 
   _buildBackground(W, H) {
@@ -247,6 +262,7 @@ class AtelierScene extends Phaser.Scene {
     const settingW = parseInt(scaledFontSize(60, this.scale));
     const settingX = W - W * 0.022 - settingW / 2;
     this._makeTopBtn(settingX, by, settingW, bh, '설  정', () => {
+      // skipWelcome: true 로 재시작해 웰컴 팝업이 다시 뜨지 않도록 함
       this.scene.start('SettingsScene', { from: 'AtelierScene' });
     });
 

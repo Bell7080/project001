@@ -61,14 +61,8 @@ class Tab_Explore {
     lineG.lineStyle(1, 0x4a2a10, 0.9);
     lineG.lineBetween(cx - panelW / 2 + 20, lineY, cx + panelW / 2 - 20, lineY);
 
-    // ── 메인 텍스트 (처음엔 숨김 — 타이핑으로 등장) ──────────
-    const txt1 = scene.add.text(cx, cy - panelH * 0.10, '', {
-      fontSize:   scaledFontSize(32, scene.scale),
-      fill:       '#e8c080',
-      fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setAlpha(0);
-
-    const txt2 = scene.add.text(cx, cy + panelH * 0.09, '', {
+    // ── 메인 텍스트 (한 줄 — 타이핑으로 등장) ───────────────
+    const txt = scene.add.text(cx, cy - panelH * 0.06, '', {
       fontSize:   scaledFontSize(32, scene.scale),
       fill:       '#e8c080',
       fontFamily: FontManager.TITLE,
@@ -77,7 +71,7 @@ class Tab_Explore {
     // ── 확인 버튼 (처음엔 숨김) ──────────────────────────────
     const btnW = parseInt(scaledFontSize(130, scene.scale));
     const btnH = parseInt(scaledFontSize(50, scene.scale));
-    const btnY = cy + panelH * 0.35;
+    const btnY = cy + panelH * 0.30;
 
     const btnBg   = scene.add.graphics().setAlpha(0);
     const btnGlow = scene.add.graphics().setAlpha(0);
@@ -145,19 +139,15 @@ class Tab_Explore {
     // ── 모두 container에 추가 ────────────────────────────────
     this._container.add([
       panel, deco, lineG,
-      txt1, txt2,
+      txt,
       btnGlow, btnBg, btnTxt, hit,
     ]);
 
     // ── 타이핑 시퀀스 시작 ───────────────────────────────────
     this._delay(80, () => {
-      this._typeText(txt1, '심해를  직면할', 52, () => {
-        this._delay(160, () => {
-          this._typeText(txt2, '준비가  되었습니까?', 42, () => {
-            this._delay(180, () => {
-              this._revealButton(btnBg, btnGlow, btnTxt, drawBtn, drawGlow);
-            });
-          });
+      this._typeText(txt, '심해를 직면할 준비가 되었습니까?', 52, () => {
+        this._delay(180, () => {
+          this._revealButton(btnBg, btnGlow, btnTxt, drawBtn, drawGlow);
         });
       });
     });
