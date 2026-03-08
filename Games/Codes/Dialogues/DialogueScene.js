@@ -1,13 +1,14 @@
 // ================================================================
 //  DialogueScene.js
-//  경로: Games/Codes/Scenes/DialogueScene.js
+//  경로: Games/Codes/Dialogues/DialogueScene.js
 //
-//  역할: 스토리 대화 이벤트 전용 씬
-//        로보토미 코퍼레이션 스타일 대화창
-//        — 하단 고정 박스 + 좌측 캐릭터 초상화 슬롯
-//        — 이름판 (닉네임 동적 변경 지원)
-//        — 타자 방식 텍스트 타이핑 (한 글자씩 출력)
-//        — 완료 시 StoryManager.completeScene 기록
+//  역할: 스토리 대화 이벤트 전용 씬 (스팀펑크 스타일)
+//        — 화면 중앙 하단 컴팩트 대화창
+//        — 좌측 캐릭터 일러스트 (Character_[name]_[expr].png)
+//        — 배경: Background_003.png
+//        — 이름판은 대화창 상단 좌측
+//        — 타자 방식 텍스트
+//        — 선택지 버튼
 //
 //  호출:
 //    this.scene.start('DialogueScene', {
@@ -16,16 +17,11 @@
 //      nextData: { save: ... },
 //    });
 //
-//  닉네임 런타임 변경:
-//    SaveManager.setFlag('cast_nick_A', 'Noa')
-//    → 다음 라인부터 이름판에 'Noa' 표시
-//    SaveManager.setFlag('cast_nick_A', null) → CAST_DATA.nickname 복귀
-//
 //  의존:
-//    DialogueData.js  — DIALOGUE_DATA, CAST_DATA, BGM_DATA, SFX_DATA, KEYWORD_DATA
+//    DialogueData.js  — DIALOGUE_DATA, CAST_DATA, BGM_DATA, SFX_DATA
 //    StoryManager.js  — completeScene
-//    SaveManager.js   — getFlag / setFlag
-//    FontManager, AudioManager, scaledFontSize (utils.js)
+//    SaveManager.js   — getFlag
+//    FontManager, scaledFontSize
 // ================================================================
 
 class DialogueScene extends Phaser.Scene {
@@ -38,20 +34,48 @@ class DialogueScene extends Phaser.Scene {
     this._nextData = data.nextData || {};
   }
 
+  // ── preload ───────────────────────────────────────────────────
+  preload() {
+    // 배경 이미지
+    if (!this.textures.exists('dlg_bg')) {
+      this.load.image('dlg_bg', 'Games/Assets/Sprites/Background_003.png');
+    }
+
+    // 캐릭터 일러스트 — CAST_DATA 기준으로 전부 시도
+    // 텍스처 키: Character_Noa_001 ~ 003
+    if (typeof CAST_DATA !== 'undefined') {
+      const loaded = new Set();
+      Object.values(CAST_DATA).forEach(cast => {
+        if (!cast.name || cast.name === 'Player') return;
+        if (loaded.has(cast.name)) return;
+        loaded.add(cast.name);
+        for (let i = 1; i <= 9; i++) {
+          const expr = String(i).padStart(3, '0');
+          const key  = `Character_${cast.name}_${expr}`;
+          if (!this.textures.exists(key)) {
+            this.load.image(key, `Games/Assets/Sprites/${key}.png`);
+          }
+        }
+      });
+    }
+  }
+
   // ── create ────────────────────────────────────────────────────
   create() {
     const W = this.scale.width;
     const H = this.scale.height;
     this.W = W;
     this.H = H;
-    this._timers         = [];
-    this._done           = false;
-    this._typing         = false;
-    this._pendingText    = '';
-    this._portraitSprite = null;
+    this._timers           = [];
+    this._done             = false;
+    this._typing           = false;
+    this._pendingText      = '';
+    this._charSprite       = null;
+    this._waitingForChoice = false;
+    this._pendingChoices   = null;
 
     const eventData = DIALOGUE_DATA[this._eventId];
-    if (!eventData) {
+    if (!eventData || !eventData.lines.length) {
       console.warn('[DialogueScene] 이벤트 없음:', this._eventId);
       this._goNext();
       return;
@@ -68,10 +92,63 @@ class DialogueScene extends Phaser.Scene {
     this._buildScene(W, H);
     this._buildInput();
 
-    // 씬 페이드인 후 첫 라인 시작
-    // cameras.main.fadeIn 콜백 대신 delayedCall 사용 (씬 전환 시 이벤트 누락 방지)
-    this.cameras.main.fadeIn(380, 5, 6, 10);
-    this.time.delayedCall(400, () => this._showLine());
+    // ── 오프닝 연출 시퀀스 ────────────────────────────────────
+    // 1) 카메라 페이드인 (어둠 → 배경)
+    this.cameras.main.fadeIn(700, 0, 0, 0);
+
+    // 2) 대화창 페이드인
+    this._uiContainer.setAlpha(0);
+    this.time.delayedCall(800, () => {
+      this.tweens.add({
+        targets:  this._uiContainer,
+        alpha:    1,
+        duration: 500,
+        ease:     'Sine.easeOut',
+      });
+    });
+
+    // 3) 캐릭터 슬라이드업 + 페이드인
+    this.time.delayedCall(1400, () => {
+      this._revealPortrait();
+    });
+
+    // 4) 이름판 페이드인
+    this.time.delayedCall(1900, () => {
+      if (this._nameTxt) {
+        this._nameTxt.setAlpha(0).setVisible(true);
+        this.tweens.add({ targets: this._nameTxt, alpha: 1, duration: 350, ease: 'Sine.easeOut' });
+      }
+    });
+
+    // 5) 대화 타이핑 시작
+    this.time.delayedCall(2200, () => this._showLine());
+  }
+
+  // ── 오프닝 전용: 캐릭터 슬라이드업 연출 ──────────────────────
+  _revealPortrait() {
+    const line = this._lines && this._lines[0];
+    if (!line || !line.char || line.char === 'P') return;
+
+    const cast = CAST_DATA[line.char];
+    if (!cast || cast.name === 'Player') return;
+
+    const exprStr = line.expr ? String(line.expr).padStart(3, '0') : '001';
+    const texKey  = `Character_${cast.name}_${exprStr}`;
+    if (!this.textures.exists(texKey)) return;
+
+    if (!this._charSprite) {
+      this._charSprite = this.add.image(this._charX, this._charY, texKey);
+      const scale = this._charH / this._charSprite.height;
+      this._charSprite.setScale(scale).setAlpha(0);
+    } else {
+      this._charSprite.setPosition(this._charX, this._charY).setAlpha(0);
+    }
+    this.tweens.add({
+      targets:  this._charSprite,
+      alpha:    1,
+      duration: 800,
+      ease:     'Linear',
+    });
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -79,183 +156,189 @@ class DialogueScene extends Phaser.Scene {
   // ════════════════════════════════════════════════════════════════
 
   _buildScene(W, H) {
-    // scaledFontSize는 '18px' 문자열 반환 → 숫자만 추출
     const fs = n => parseInt(scaledFontSize(n, this.scale), 10);
     this._fs = fs;
 
     // ── 배경 ──────────────────────────────────────────────────
-    this.add.rectangle(0, 0, W, H, 0x05060a).setOrigin(0);
-
-    // 그리드
-    const grid = this.add.graphics();
-    const step = Math.round(W / 52);
-    grid.lineStyle(1, 0x0d1018, 0.7);
-    for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
-    for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
-
-    // 스캔라인
-    const scan = this.add.graphics();
-    for (let y = 0; y < H; y += 4) {
-      scan.lineStyle(1, 0x000000, 0.08);
-      scan.lineBetween(0, y, W, y);
+    if (this.textures.exists('dlg_bg')) {
+      const bg = this.add.image(W / 2, H / 2, 'dlg_bg')
+        .setDisplaySize(W, H);
+      // 어둡게 오버레이
+      this.add.rectangle(0, 0, W, H, 0x000000, 0.55).setOrigin(0);
+    } else {
+      // 폴백: 짙은 배경 + 그리드
+      this.add.rectangle(0, 0, W, H, 0x080a0f).setOrigin(0);
+      const grid = this.add.graphics();
+      const step = Math.round(W / 52);
+      grid.lineStyle(1, 0x0d1018, 0.6);
+      for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
+      for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
     }
 
-    // ── 치수 계산 ─────────────────────────────────────────────
-    const BOX_H   = Math.round(H * 0.285);
-    const BOX_Y   = H - BOX_H;
-    const CHAR_W  = Math.round(W * 0.22);
-    const PAD     = Math.round(fs(18));
-    const TEXT_X  = CHAR_W + PAD;
-    const TEXT_W  = W - TEXT_X - PAD;
-    const TEXT_Y  = BOX_Y + PAD;
+    // ── 치수 ─────────────────────────────────────────────────
+    // 대화창: 화면 너비 60%, 높이 26%, 하단 중앙
+    const BOX_W  = Math.round(W * 0.60);
+    const BOX_H  = Math.round(H * 0.26);
+    const BOX_X  = Math.round((W - BOX_W) / 2);   // 좌측 X
+    const BOX_Y  = Math.round(H - BOX_H - H * 0.04);
+    const PAD    = fs(16);
+    const TEXT_X = BOX_X + PAD;
+    const TEXT_Y = BOX_Y + PAD + fs(10);   // 이름판 아래에서 시작
+    const TEXT_W = BOX_W - PAD * 2;
 
-    this._layout = { BOX_H, BOX_Y, CHAR_W, PAD, TEXT_X, TEXT_W, TEXT_Y, fs };
+    this._layout = { BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs };
 
-    this._buildBox(W, H, BOX_H, BOX_Y, CHAR_W, PAD, TEXT_X, TEXT_W, TEXT_Y, fs);
+    // UI 전체를 하나의 컨테이너로 묶어 페이드인 제어
+    this._uiContainer = this.add.container(0, 0);
+    this._buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs);
+    this._buildCharacterSlot(W, H, BOX_X, BOX_Y, fs);
+    // 선택지 컨테이너 — 캐릭터/UI보다 위에 표시
+    this._choiceCont = this.add.container(0, 0);
+    this.children.bringToTop(this._choiceCont);
   }
 
-  _buildBox(W, H, BOX_H, BOX_Y, CHAR_W, PAD, TEXT_X, TEXT_W, TEXT_Y, fs) {
+  // ── 대화창 박스 (스팀펑크) ────────────────────────────────────
+  _buildBox(W, H, BOX_W, BOX_H, BOX_X, BOX_Y, PAD, TEXT_X, TEXT_Y, TEXT_W, fs) {
+    const g = this.add.graphics();
+    this._uiContainer.add(g);
 
-    // ── 대화창 배경 패널 ──────────────────────────────────────
-    const panel = this.add.graphics();
+    // ── 메인 패널 ─────────────────────────────────────────────
+    // 반투명 짙은 배경
+    g.fillStyle(0x06090f, 0.92);
+    g.fillRect(BOX_X, BOX_Y, BOX_W, BOX_H);
 
-    // 메인 배경
-    panel.fillStyle(0x060810, 0.96);
-    panel.fillRect(0, BOX_Y, W, BOX_H);
+    // 외곽 테두리 — 이중선 (스팀펑크 느낌)
+    g.lineStyle(2, 0x8a6020, 0.9);
+    g.strokeRect(BOX_X, BOX_Y, BOX_W, BOX_H);
+    g.lineStyle(1, 0xc89040, 0.35);
+    g.strokeRect(BOX_X + 3, BOX_Y + 3, BOX_W - 6, BOX_H - 6);
 
-    // 상단 경계선 — 두 겹 (로보토미 특징)
-    panel.lineStyle(2, 0x253550, 1.0);
-    panel.lineBetween(0, BOX_Y, W, BOX_Y);
-    panel.lineStyle(1, 0x3a5578, 0.45);
-    panel.lineBetween(0, BOX_Y + 3, W, BOX_Y + 3);
+    // 상단 구분선 (이름판 아래) — 이름판 높이 fs(42)에 맞춰 조정
+    const lineY = BOX_Y + fs(46);
+    g.lineStyle(1, 0x8a6020, 0.6);
+    g.lineBetween(BOX_X + PAD, lineY, BOX_X + BOX_W - PAD, lineY);
+    g.lineStyle(1, 0xc89040, 0.2);
+    g.lineBetween(BOX_X + PAD, lineY + 2, BOX_X + BOX_W - PAD, lineY + 2);
 
-    // 초상화 영역 구분선
-    panel.lineStyle(1, 0x182230, 1.0);
-    panel.lineBetween(CHAR_W, BOX_Y + 6, CHAR_W, H - 6);
+    // 코너 장식 (리벳 느낌)
+    const cs = 10;
+    const corners = [
+      [BOX_X + 6, BOX_Y + 6],
+      [BOX_X + BOX_W - 6, BOX_Y + 6],
+      [BOX_X + 6, BOX_Y + BOX_H - 6],
+      [BOX_X + BOX_W - 6, BOX_Y + BOX_H - 6],
+    ];
+    corners.forEach(([cx, cy]) => {
+      g.fillStyle(0xc89040, 0.7);
+      g.fillCircle(cx, cy, 3);
+      g.lineStyle(1, 0x8a6020, 0.5);
+      g.strokeCircle(cx, cy, 5);
+    });
 
-    // 초상화 영역 배경 (약간 더 어둡게)
-    panel.fillStyle(0x03040a, 0.6);
-    panel.fillRect(0, BOX_Y, CHAR_W, BOX_H);
+    // 좌측 장식선
+    g.lineStyle(2, 0xc89040, 0.5);
+    g.lineBetween(BOX_X + 8, BOX_Y + 18, BOX_X + 8, BOX_Y + BOX_H - 18);
 
-    // ── 초상화 프레임 ─────────────────────────────────────────
-    const pf   = this.add.graphics();
-    const pm   = 6;  // margin
-    const prx  = pm;
-    const pry  = BOX_Y + pm;
-    const prw  = CHAR_W - pm * 2;
-    const prh  = BOX_H - pm * 2;
-    pf.lineStyle(1, 0x182535, 0.8);
-    pf.strokeRect(prx, pry, prw, prh);
-    // 코너 강조
-    const cs = 8;
-    pf.lineStyle(1, 0x2a4060, 0.7);
-    [[prx,pry,1,1],[prx+prw,pry,-1,1],[prx,pry+prh,1,-1],[prx+prw,pry+prh,-1,-1]]
-      .forEach(([ox,oy,sx,sy]) => {
-        pf.lineBetween(ox, oy, ox+cs*sx, oy);
-        pf.lineBetween(ox, oy, ox, oy+cs*sy);
-      });
+    // 우측 장식선
+    g.lineBetween(BOX_X + BOX_W - 8, BOX_Y + 18, BOX_X + BOX_W - 8, BOX_Y + BOX_H - 18);
 
-    // 초상화 텍스트 플레이스홀더 (텍스처 없을 때)
-    this._portraitLabel = this.add.text(
-      CHAR_W / 2, BOX_Y + BOX_H / 2, '', {
-      fontSize:   `${fs(10)}px`,
-      fill:       '#182535',
-      fontFamily: FontManager.MONO,
-      align:      'center',
-    }).setOrigin(0.5);
+    // 하단 중앙 장식 (기어 느낌)
+    const midX = BOX_X + BOX_W / 2;
+    g.lineStyle(1, 0x8a6020, 0.4);
+    g.lineBetween(midX - 30, BOX_Y + BOX_H - 4, midX + 30, BOX_Y + BOX_H - 4);
+    g.fillStyle(0xc89040, 0.5);
+    g.fillCircle(midX, BOX_Y + BOX_H - 4, 3);
 
     // ── 이름판 ────────────────────────────────────────────────
-    // 로보토미: 대화창 상단 왼쪽, 살짝 위로 걸쳐있음
-    const NW = Math.round(W * 0.22);
-    const NH = Math.round(fs(28));
-    const NX = TEXT_X;
-    const NY = BOX_Y - NH + 2;
+    const NW = Math.round(BOX_W * 0.35);
+    const NH = fs(42);   // 높이 크게
+    const NX = BOX_X;
+    const NY = BOX_Y - NH + 1;
 
-    const nameBg = this.add.graphics();
-
+    const ng = this.add.graphics();
+    this._uiContainer.add(ng);
     // 이름판 배경
-    nameBg.fillStyle(0x080f1e, 1.0);
-    nameBg.fillRect(NX, NY, NW, NH);
-
+    ng.fillStyle(0x0a0d16, 0.97);
+    ng.fillRect(NX, NY, NW, NH);
     // 이름판 테두리
-    nameBg.lineStyle(1, 0x253550, 1.0);
-    nameBg.strokeRect(NX, NY, NW, NH);
-
-    // 왼쪽 세로 강조선 (로보토미 특징)
-    nameBg.lineStyle(2, 0x4a7aaa, 1.0);
-    nameBg.lineBetween(NX, NY, NX, NY + NH);
-
-    // 상단 하이라이트
-    nameBg.lineStyle(1, 0x3a5578, 0.5);
-    nameBg.lineBetween(NX + 2, NY + 1, NX + NW - 2, NY + 1);
+    ng.lineStyle(2, 0x8a6020, 0.9);
+    ng.strokeRect(NX, NY, NW, NH);
+    ng.lineStyle(1, 0xc89040, 0.3);
+    ng.strokeRect(NX + 2, NY + 2, NW - 4, NH - 4);
+    // 이름판 좌측 강조선
+    ng.lineStyle(3, 0xc89040, 0.8);
+    ng.lineBetween(NX, NY + 2, NX, NY + NH - 2);
+    // 이름판 우하단 작은 장식
+    ng.fillStyle(0xc89040, 0.6);
+    ng.fillRect(NX + NW - 6, NY + NH - 2, 6, 2);
 
     this._nameTxt = this.add.text(
       NX + NW / 2, NY + NH / 2, '', {
-      fontSize:        `${fs(12)}px`,
-      fill:            '#9ab8d8',    // 로보토미 청백색 이름
+      fontSize:        `${fs(20)}px`,   // 폰트 크게
+      fill:            '#e8c87a',
       fontFamily:      FontManager.TITLE,
-      stroke:          '#03060f',
-      strokeThickness: 2,
-    }).setOrigin(0.5);
-
-    this._nameLayout = { NX, NY, NW, NH };
+      stroke:          '#050810',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setVisible(false);
+    this._uiContainer.add(this._nameTxt);
 
     // ── 본문 텍스트 ───────────────────────────────────────────
     this._bodyTxt = this.add.text(
-      TEXT_X, TEXT_Y, '', {
-      fontSize:    `${fs(15)}px`,
-      fill:        '#b8cce0',      // 로보토미: 청백색 계열
-      fontFamily:  FontManager.BODY || FontManager.MONO,
+      TEXT_X, TEXT_Y + fs(28), '', {   // 위치 아래로
+      fontSize:    `${fs(20)}px`,      // 폰트 크게
+      fill:        '#d8cbb8',
+      fontFamily:  FontManager.BODY,
       wordWrap:    { width: TEXT_W },
-      lineSpacing: Math.round(fs(7)),
+      lineSpacing: fs(8),
     });
+    this._uiContainer.add(this._bodyTxt);
 
-    // ── ▶ 다음 줄 표시 ────────────────────────────────────────
+    // ── ▶ 다음 줄 아이콘 ─────────────────────────────────────
     this._nextIcon = this.add.text(
-      W - Math.round(fs(20)), H - Math.round(fs(16)),
+      BOX_X + BOX_W - PAD,
+      BOX_Y + BOX_H - fs(14),
       '▶', {
       fontSize:   `${fs(11)}px`,
-      fill:       '#3a6a9a',
+      fill:       '#c89040',
       fontFamily: FontManager.MONO,
-    }).setOrigin(0.5).setVisible(false);
+    }).setOrigin(1, 0.5).setVisible(false);
+    this._uiContainer.add(this._nextIcon);
 
-    // 이동 + 점멸 동시
     this.tweens.add({
       targets:  this._nextIcon,
-      alpha:    { from: 0.25, to: 1.0 },
-      x:        { from: W - Math.round(fs(22)), to: W - Math.round(fs(18)) },
-      duration: 580,
+      alpha:    { from: 0.3, to: 1.0 },
+      x:        { from: BOX_X + BOX_W - PAD - 3, to: BOX_X + BOX_W - PAD },
+      duration: 550,
       yoyo:     true,
       repeat:   -1,
       ease:     'Sine.easeInOut',
     });
 
-    // 하단 입력 힌트
-    this.add.text(
-      W - Math.round(fs(20)),
-      H - Math.round(fs(5)),
-      'SPACE  /  CLICK', {
+    // 하단 힌트
+    const hint = this.add.text(
+      BOX_X + BOX_W - PAD,
+      BOX_Y + BOX_H + fs(4),
+      'SPACE / CLICK', {
       fontSize:      `${fs(7)}px`,
-      fill:          '#182535',
+      fill:          '#5a4a28',
       fontFamily:    FontManager.MONO,
       letterSpacing: 2,
-    }).setOrigin(1, 1);
+    }).setOrigin(1, 0);
+    this._uiContainer.add(hint);
+  }
 
-    // 선택지 컨테이너
-    this._choiceCont = this.add.container(0, 0);
+  // ── 캐릭터 슬롯 (화면 중앙, 발끝이 대화창 상단에 걸치게) ──────
+  _buildCharacterSlot(W, H, BOX_X, BOX_Y, fs) {
+    this._charH = Math.round(H * 0.75 * 0.85);   // 기존 대비 15% 축소
+    this._charX = Math.round(W / 2);
+    // 스프라이트 origin(0.5, 0.5) 기준 — 발끝(중심 + charH/2)을 BOX_Y에 맞춤
+    this._charY = BOX_Y - Math.round(this._charH / 2);
   }
 
   // ════════════════════════════════════════════════════════════════
   //  닉네임 해석
   // ════════════════════════════════════════════════════════════════
 
-  /**
-   * 캐릭터 키로 현재 표시할 이름 반환
-   * 우선순위:
-   *   1. SaveManager.getFlag('cast_nick_A') — 런타임 변경값
-   *   2. CAST_DATA[key].nickname            — xlsx D열 닉네임
-   *   3. CAST_DATA[key].name                — xlsx B열 캐릭터명
-   */
   _getDisplayName(charKey) {
     if (!charKey) return '';
     const runtime = SaveManager.getFlag('cast_nick_' + charKey);
@@ -284,8 +367,28 @@ class DialogueScene extends Phaser.Scene {
   _onAdvance() {
     if (this._done) return;
     const line = this._lines[this._cursor];
-    if (line && line.isChoice) return;   // 선택지 중 — 버튼만
+    if (line && line.isChoice && !this._waitingForChoice) return;
+
     if (this._typing) { this._skipType(); return; }
+
+    // 선택지 대기 상태 — 텍스트 페이드아웃 후 버튼 등장
+    if (this._waitingForChoice) {
+      this._waitingForChoice = false;
+      this._nextIcon.setVisible(false);
+      const choices = this._pendingChoices;
+      this.tweens.add({
+        targets:  this._bodyTxt,
+        alpha:    0,
+        duration: 250,
+        ease:     'Sine.easeIn',
+        onComplete: () => {
+          this._bodyTxt.setText('').setAlpha(1);
+          this._showChoices(choices);
+        },
+      });
+      return;
+    }
+
     this._cursor++;
     this._showLine();
   }
@@ -304,13 +407,16 @@ class DialogueScene extends Phaser.Scene {
 
     // 이름판
     const isPlayer = (line.char === 'P');
-    this._nameTxt.setVisible(!isPlayer);
-    if (!isPlayer) this._nameTxt.setText(this._getDisplayName(line.char));
+    if (isPlayer) {
+      this._nameTxt.setVisible(false);
+    } else {
+      this._nameTxt.setText(this._getDisplayName(line.char)).setVisible(true);
+    }
 
-    // 초상화
+    // 캐릭터 이미지
     this._updatePortrait(line.char, line.expr);
 
-    // SFX (복합: Happy|Beep)
+    // SFX
     if (line.sfx && typeof AudioManager !== 'undefined') {
       line.sfx.split('|').forEach(alias => {
         const f = SFX_DATA[alias.trim()];
@@ -328,10 +434,11 @@ class DialogueScene extends Phaser.Scene {
     this._nextIcon.setVisible(false);
 
     if (line.isChoice) {
-      // 본문 먼저 타이핑 → 완료 후 선택지
+      // 텍스트 타이핑 후 ▶ 아이콘 표시 — 클릭하면 텍스트 페이드아웃 후 선택지 등장
+      this._pendingChoices = line.choices;
+      this._waitingForChoice = true;
       this._typeText(line.text, () => {
-        this._nextIcon.setVisible(false);
-        this._showChoices(line.choices);
+        this._nextIcon.setVisible(true);
       });
     } else {
       this._typeText(line.text, () => {
@@ -340,66 +447,65 @@ class DialogueScene extends Phaser.Scene {
     }
   }
 
-  // ── 초상화 ────────────────────────────────────────────────────
+  // ── 캐릭터 이미지 ─────────────────────────────────────────────
   _updatePortrait(charKey, expr) {
     if (!charKey || charKey === 'P') {
-      this._portraitLabel.setText('');
-      if (this._portraitSprite) this._portraitSprite.setVisible(false);
+      if (this._charSprite) {
+        this.tweens.add({ targets: this._charSprite, alpha: 0, duration: 200,
+          onComplete: () => { if (this._charSprite) this._charSprite.setVisible(false); }
+        });
+      }
       return;
     }
 
     const cast = CAST_DATA[charKey];
-    if (!cast) return;
+    if (!cast || cast.name === 'Player') return;
 
-    if (expr) {
-      const texKey = `Character_${cast.name}_${String(expr).padStart(3,'0')}`;
-      if (this.textures.exists(texKey)) {
-        const { CHAR_W, BOX_Y, BOX_H } = this._layout;
-        if (!this._portraitSprite) {
-          this._portraitSprite = this.add.image(CHAR_W/2, BOX_Y + BOX_H/2, texKey)
-            .setDisplaySize(CHAR_W - 12, BOX_H - 12);
-        } else {
-          this._portraitSprite.setTexture(texKey).setVisible(true)
-            .setPosition(CHAR_W/2, BOX_Y + BOX_H/2);
-        }
-        this._portraitLabel.setText('');
-        return;
+    const exprStr = expr ? String(expr).padStart(3, '0') : '001';
+    const texKey  = `Character_${cast.name}_${exprStr}`;
+
+    if (!this.textures.exists(texKey)) return;
+
+    if (!this._charSprite) {
+      this._charSprite = this.add.image(this._charX, this._charY, texKey);
+      const scale = this._charH / this._charSprite.height;
+      this._charSprite.setScale(scale).setAlpha(0);
+      this.tweens.add({ targets: this._charSprite, alpha: 1, duration: 250 });
+    } else {
+      if (this._charSprite.texture.key !== texKey) {
+        this._charSprite.setTexture(texKey);
+        const scale = this._charH / this._charSprite.height;
+        this._charSprite.setScale(scale).setVisible(true);
       }
     }
-
-    if (this._portraitSprite) this._portraitSprite.setVisible(false);
-    this._portraitLabel.setText(cast.name);
   }
 
   // ════════════════════════════════════════════════════════════════
-  //  타이핑 텍스트
+  //  타이핑
   // ════════════════════════════════════════════════════════════════
 
   _typeText(fullText, onDone) {
-    // 이전 타이머 정리
     this._timers.forEach(t => { if (t && t.remove) t.remove(); });
     this._timers = [];
-
     this._typing      = true;
     this._pendingText = fullText;
     this._bodyTxt.setText('');
 
-    const chars = [...fullText];  // 유니코드 문자 단위 분리
+    const chars = [...fullText];
     let i = 0;
-
     const tick = () => {
       if (!this.scene || !this.scene.isActive()) return;
       if (i < chars.length) {
         i++;
         this._bodyTxt.setText(chars.slice(0, i).join(''));
-        this._timers.push(this.time.delayedCall(26, tick));
+        this._timers.push(this.time.delayedCall(28, tick));
       } else {
         this._typing = false;
         this._bodyTxt.setText(fullText);
         if (onDone) onDone();
       }
     };
-    this._timers.push(this.time.delayedCall(26, tick));
+    this._timers.push(this.time.delayedCall(28, tick));
   }
 
   _skipType() {
@@ -411,85 +517,90 @@ class DialogueScene extends Phaser.Scene {
   }
 
   // ════════════════════════════════════════════════════════════════
-  //  선택지
+  //  선택지 (스팀펑크 스타일)
   // ════════════════════════════════════════════════════════════════
 
   _showChoices(choices) {
-    if (!choices || choices.length === 0) {
-      this._cursor++;
-      this._showLine();
-      return;
-    }
+    if (!choices || !choices.length) { this._cursor++; this._showLine(); return; }
 
-    const W  = this.W;
-    const fs = this._fs;
-    const { BOX_Y } = this._layout;
+    const fs  = this._fs;
+    const { BOX_X, BOX_W, BOX_Y, BOX_H, PAD } = this._layout;
 
-    const BTN_H  = Math.round(fs(42));
-    const BTN_W  = Math.round(W * 0.46);
-    const GAP    = Math.round(fs(6));
-    const totalH = choices.length * (BTN_H + GAP) - GAP;
-    const startY = BOX_Y - totalH - Math.round(fs(18));
+    const BTN_H = fs(44);
+    const BTN_W = Math.round(BOX_W * 0.78);
+    const GAP   = fs(8);
+
+    // ── 버튼 묶음을 대화창 내부 중앙에 배치 ──────────────────
+    const totalH = choices.length * BTN_H + (choices.length - 1) * GAP;
+    // 대화창 내부 상단 여백(이름판+구분선 영역) 제외한 본문 영역 중앙
+    const innerTop = BOX_Y + fs(50);   // 구분선 아래
+    const innerH   = BOX_H - fs(50) - PAD;
+    const startX   = BOX_X + (BOX_W - BTN_W) / 2;
+    const startY   = innerTop + (innerH - totalH) / 2;
 
     this._choiceCont.removeAll(true);
+    this.children.bringToTop(this._choiceCont);
 
     choices.forEach((choice, i) => {
-      const bx = W / 2;
+      const bx = startX;
       const by = startY + i * (BTN_H + GAP);
 
       const bg = this.add.graphics();
-      const draw = (hover) => {
+
+      const draw = hover => {
         bg.clear();
-        bg.fillStyle(hover ? 0x0d1e38 : 0x060d1a, hover ? 0.97 : 0.92);
-        bg.lineStyle(1, hover ? 0x4a7aaa : 0x1e3050, 1.0);
-        bg.strokeRect(bx - BTN_W/2, by, BTN_W, BTN_H);
-        bg.fillRect(bx - BTN_W/2, by, BTN_W, BTN_H);
-        // 왼쪽 포인트 선
-        bg.lineStyle(2, hover ? 0x6a9acc : 0x2a4a6a, 1.0);
-        bg.lineBetween(bx - BTN_W/2, by + 2, bx - BTN_W/2, by + BTN_H - 2);
-        // 상단 광택
-        bg.lineStyle(1, hover ? 0x3a6a9a : 0x162030, 0.5);
-        bg.lineBetween(bx - BTN_W/2 + 2, by + 1, bx + BTN_W/2 - 2, by + 1);
+
+        // 배경
+        bg.fillStyle(hover ? 0x181208 : 0x0c0a04, hover ? 0.97 : 0.92);
+        bg.fillRect(bx, by, BTN_W, BTN_H);
+
+        // 외곽 단선 테두리
+        bg.lineStyle(1, hover ? 0xc89040 : 0x6a4a18, 1.0);
+        bg.strokeRect(bx, by, BTN_W, BTN_H);
+
+        // 좌측 강조선
+        bg.fillStyle(hover ? 0xd4a040 : 0x8a6020, 1.0);
+        bg.fillRect(bx, by, 2, BTN_H);
       };
       draw(false);
 
-      // 마커 ▷
+      // ◆ 다이아 마커
       const marker = this.add.text(
-        bx - BTN_W/2 + Math.round(fs(10)),
-        by + BTN_H/2,
-        '▷', {
-        fontSize:   `${fs(10)}px`,
-        fill:       '#2a4a6a',
+        bx + fs(20), by + BTN_H / 2, '◆', {
+        fontSize:   `${fs(9)}px`,
+        fill:       '#8a6020',
         fontFamily: FontManager.MONO,
-      }).setOrigin(0, 0.5);
+      }).setOrigin(0.5, 0.5);
 
       // 선택지 텍스트
       const lbl = this.add.text(
-        bx - BTN_W/2 + Math.round(fs(26)),
-        by + BTN_H/2,
-        choice.label, {
-        fontSize:   `${fs(13)}px`,
-        fill:       '#7aaac8',
-        fontFamily: FontManager.BODY || FontManager.MONO,
-        wordWrap:   { width: BTN_W - Math.round(fs(34)) },
+        bx + fs(34), by + BTN_H / 2, choice.label, {
+        fontSize:   `${fs(15)}px`,
+        fill:       '#c8a858',
+        fontFamily: FontManager.BODY,
+        wordWrap:   { width: BTN_W - fs(44) },
+        stroke:          '#080600',
+        strokeThickness: 2,
       }).setOrigin(0, 0.5);
 
-      const hit = this.add.rectangle(bx, by + BTN_H/2, BTN_W, BTN_H, 0, 0)
-        .setInteractive({ useHandCursor: true });
+      const hit = this.add.rectangle(
+        bx + BTN_W / 2, by + BTN_H / 2, BTN_W, BTN_H, 0, 0
+      ).setInteractive({ useHandCursor: true });
 
       hit.on('pointerover', () => {
         draw(true);
-        lbl.setStyle({ fill: '#c0daf2' });
-        marker.setStyle({ fill: '#6aaccc' });
+        lbl.setStyle({ fill: '#f8e080', stroke: '#080600', strokeThickness: 2 });
+        marker.setStyle({ fill: '#f0c040' });
+        this.tweens.add({ targets: lbl, x: bx + fs(38), duration: 80, ease: 'Sine.easeOut' });
       });
       hit.on('pointerout', () => {
         draw(false);
-        lbl.setStyle({ fill: '#7aaac8' });
-        marker.setStyle({ fill: '#2a4a6a' });
+        lbl.setStyle({ fill: '#c8a858', stroke: '#080600', strokeThickness: 2 });
+        marker.setStyle({ fill: '#8a6020' });
+        this.tweens.add({ targets: lbl, x: bx + fs(34), duration: 80, ease: 'Sine.easeOut' });
       });
       hit.on('pointerdown', () => {
         this._choiceCont.removeAll(true);
-        // gotoIdx: convert 시 processedMap 기준으로 미리 계산된 인덱스
         if (choice.gotoIdx != null) {
           this._cursor = choice.gotoIdx;
         } else if (choice.goto && this._lineMap[choice.goto] != null) {
@@ -500,7 +611,18 @@ class DialogueScene extends Phaser.Scene {
         this._showLine();
       });
 
-      this._choiceCont.add([bg, marker, lbl, hit]);
+      // 알파 등장 (딜레이 스태거)
+      const items = [bg, marker, lbl, hit];
+      items.forEach(obj => obj.setAlpha(0));
+      this.tweens.add({
+        targets:  [bg, marker, lbl, hit],
+        alpha:    1,
+        duration: 350,
+        delay:    i * 100,
+        ease:     'Linear',
+      });
+
+      this._choiceCont.add(items);
     });
   }
 
@@ -512,31 +634,17 @@ class DialogueScene extends Phaser.Scene {
     fxStr.split('|').forEach(part => {
       const [name, paramStr] = part.trim().split(':');
       const p = {};
-      if (paramStr) {
-        paramStr.split(',').forEach(kv => {
-          const [k, v] = kv.split('=');
-          p[k.trim()] = isNaN(v) ? v.trim() : Number(v);
-        });
-      }
+      if (paramStr) paramStr.split(',').forEach(kv => {
+        const [k, v] = kv.split('=');
+        p[k.trim()] = isNaN(v) ? v.trim() : Number(v);
+      });
       switch (name.trim()) {
-        case 'shake_screen':
-          this.cameras.main.shake(p.duration || 300, (p.intensity || 3) / 1000);
-          break;
-        case 'flash_screen':
-          this.cameras.main.flash(p.duration || 200, 255, 255, 255);
-          break;
-        case 'fade_out':
-          this.cameras.main.fadeOut(p.duration || 400, 5, 6, 10);
-          break;
-        case 'fade_in':
-          this.cameras.main.fadeIn(p.duration || 400, 5, 6, 10);
-          break;
-        case 'zoom_in':
-          this.cameras.main.zoomTo(p.zoom || 1.2, p.duration || 300);
-          break;
-        case 'zoom_out':
-          this.cameras.main.zoomTo(p.zoom || 1.0, p.duration || 300);
-          break;
+        case 'shake_screen': this.cameras.main.shake(p.duration || 300, (p.intensity || 3) / 1000); break;
+        case 'flash_screen': this.cameras.main.flash(p.duration || 200, 255, 255, 255); break;
+        case 'fade_out':     this.cameras.main.fadeOut(p.duration || 400, 0, 0, 0); break;
+        case 'fade_in':      this.cameras.main.fadeIn(p.duration  || 400, 0, 0, 0); break;
+        case 'zoom_in':      this.cameras.main.zoomTo(p.zoom || 1.2, p.duration || 300); break;
+        case 'zoom_out':     this.cameras.main.zoomTo(p.zoom || 1.0, p.duration || 300); break;
       }
     });
   }
@@ -549,11 +657,8 @@ class DialogueScene extends Phaser.Scene {
     if (this._done) return;
     this._done = true;
     this._removeInput();
-
-    // once 플래그 저장 (다음 번엔 getScenesForToday에서 필터링)
     StoryManager.completeScene(this._eventId);
-
-    this.cameras.main.fadeOut(350, 5, 6, 10);
+    this.cameras.main.fadeOut(350, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => this._goNext());
   }
 
@@ -561,7 +666,6 @@ class DialogueScene extends Phaser.Scene {
     this.scene.start(this._next, this._nextData);
   }
 
-  // ── 씬 종료 정리 ─────────────────────────────────────────────
   shutdown() {
     this._timers.forEach(t => { if (t && t.remove) t.remove(); });
     this._timers = [];

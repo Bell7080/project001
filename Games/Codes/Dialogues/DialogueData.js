@@ -46,94 +46,6 @@ const SFX_DATA = {
   "Cancel": "sfx_cancel"
 };
 
-// ── KEYWORD_DATA ──────────────────────────────────────────────────
-const KEYWORD_DATA = {
-  "이형": {
-    "color": "FF4444",
-    "bold": true,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "노아(Noa)": {
-    "color": "b22222",
-    "bold": true,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "A.I": {
-    "color": "5DD8F0",
-    "bold": true,
-    "italic": false,
-    "underline": false,
-    "effect": "glow"
-  },
-  "탐사": {
-    "color": "7FDD55",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "경고": {
-    "color": "FF8800",
-    "bold": true,
-    "italic": false,
-    "underline": false,
-    "effect": "blink"
-  },
-  "시스템": {
-    "color": "BB88FF",
-    "bold": true,
-    "italic": false,
-    "underline": true,
-    "effect": "none"
-  },
-  "???": {
-    "color": "999999",
-    "bold": false,
-    "italic": true,
-    "underline": false,
-    "effect": "none"
-  },
-  "ERROR": {
-    "color": "FF2222",
-    "bold": true,
-    "italic": false,
-    "underline": false,
-    "effect": "shake"
-  },
-  "기밀": {
-    "color": "AAAAAA",
-    "bold": false,
-    "italic": false,
-    "underline": true,
-    "effect": "blur"
-  },
-  "위험": {
-    "color": "FF6600",
-    "bold": true,
-    "italic": false,
-    "underline": false,
-    "effect": "blink"
-  },
-  "해제": {
-    "color": "44FF88",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  },
-  "연결": {
-    "color": "5DD8F0",
-    "bold": false,
-    "italic": false,
-    "underline": false,
-    "effect": "none"
-  }
-};
-
 // ── DIALOGUE_DATA ─────────────────────────────────────────────────
 //
 //  구조: {
@@ -164,7 +76,7 @@ const DIALOGUE_DATA = {
         "id": "002",
         "char": "A",
         "expr": "001",
-        "text": "저는 외각 지부에 이전 관리자 노아(Noa)라고 합니다.",
+        "text": "저는 외곽 지부에 이전 관리자 노아(Noa)라고 합니다.",
         "choice": false,
         "goto": null,
         "flag_set": null,
@@ -173,7 +85,7 @@ const DIALOGUE_DATA = {
         "fx": null,
         "choices": [
           {
-            "label": "외각 지부?",
+            "label": "외곽 지부?",
             "goto": "004",
             "gotoIdx": 2
           }

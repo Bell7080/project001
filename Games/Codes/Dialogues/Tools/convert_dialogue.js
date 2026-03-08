@@ -102,30 +102,6 @@ function parseSfx() {
   return data;
 }
 
-// ── KEYWORD_DATA 파싱 ─────────────────────────────────────────────
-function parseKeyword() {
-  const ws   = wb.Sheets['KEYWORD'];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-  const data = {};
-  for (let i = HEADER_ROWS; i < rows.length; i++) {
-    const [kw, color, bold, italic, underline, effect] = rows[i];
-    const k = clean(kw);
-    if (!k) continue;
-    // 헤더행·구분행·효과 설명행 스킵
-    // color가 HEX 6자리가 아니면 데이터 행이 아님
-    const c = clean(color);
-    if (!c || !/^[0-9A-Fa-f]{6}$/.test(c)) continue;
-    data[k] = {
-      color:     c,
-      bold:      clean(bold)      === 'Y',
-      italic:    clean(italic)    === 'Y',
-      underline: clean(underline) === 'Y',
-      effect:    clean(effect)    || 'none',
-    };
-  }
-  return data;
-}
-
 // ── DIALOGUE_DATA 파싱 ────────────────────────────────────────────
 // 컬럼 순서: line_id, char, expr, text, choice, goto, flag_set, flag_check, sfx, fx
 function parseDialogue(sheetName) {
@@ -211,7 +187,6 @@ function parseDialogue(sheetName) {
 const CAST_DATA    = parseCast();
 const BGM_DATA     = parseBgm();
 const SFX_DATA     = parseSfx();
-const KEYWORD_DATA = parseKeyword();
 const DIALOGUE_DATA = {};
 
 for (const name of wb.SheetNames) {
@@ -245,9 +220,6 @@ const BGM_DATA = ${JSON.stringify(BGM_DATA, null, 2)};
 
 // ── SFX_DATA ──────────────────────────────────────────────────────
 const SFX_DATA = ${JSON.stringify(SFX_DATA, null, 2)};
-
-// ── KEYWORD_DATA ──────────────────────────────────────────────────
-const KEYWORD_DATA = ${JSON.stringify(KEYWORD_DATA, null, 2)};
 
 // ── DIALOGUE_DATA ─────────────────────────────────────────────────
 //
