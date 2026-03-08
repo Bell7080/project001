@@ -3,7 +3,17 @@
 //  경로: Games/Codes/Scenes/LoadingScene.js
 //
 //  역할: 씬 전환 시 로딩 화면
-//  의존: FontManager, utils.js, CharacterSpriteManager
+//        AtelierScene 진입 전 미완료 스토리 이벤트 자동 체크
+//
+//  흐름:
+//    LobbyScene → LoadingScene
+//      └─ nextScene === 'AtelierScene' + 미완료 이벤트 있음
+//           → DialogueScene 경유 후 AtelierScene
+//      └─ 이미 다 봤거나 해당 없음
+//           → 바로 AtelierScene
+//
+//  의존: FontManager, utils.js, CharacterSpriteManager,
+//        StoryManager, SaveManager
 // ================================================================
 
 class LoadingScene extends Phaser.Scene {
@@ -15,10 +25,8 @@ class LoadingScene extends Phaser.Scene {
   }
 
   preload() {
-    // 캐릭터 스프라이트 시트 2장 로드
     CharacterSpriteManager.preload(this);
 
-    // 로드 진행률 (선택)
     this.load.on('progress', (value) => {
       if (this._progressDot) {
         const stages = ['·', '· ·', '· · ·'];
@@ -68,13 +76,36 @@ class LoadingScene extends Phaser.Scene {
       callback: () => { dot.setText(dots[count % 3]); count++; },
     });
 
-    // ── 스프라이트 시트 → 개별 텍스처 등록 ───────────────
-    // preload 완료 후 create에서 한 번만 실행
+    // ── 스프라이트 시트 등록 ──────────────────────────────
     CharacterSpriteManager.extractToTextures(this);
 
     // ── 다음 씬으로 ───────────────────────────────────────
-    this.time.delayedCall(1200, () => {
+    this.time.delayedCall(1200, () => this._goNext());
+  }
+
+  // AtelierScene 진입 시에만 스토리 이벤트 체크
+  // 그 외 씬 전환은 그냥 통과
+  _goNext() {
+    if (this.nextScene !== 'AtelierScene') {
       this.scene.start(this.nextScene, { save: this.saveData });
-    });
+      return;
+    }
+
+    // StoryManager.getScenesForToday('start'):
+    //   오늘 day의 start 이벤트 중 once:true + 아직 _seen 플래그 없는 것만 반환
+    //   → '초회이고 아직 안 본' 이벤트만 나옴, 두 번째 로딩부터는 빈 배열
+    const pending = StoryManager.getScenesForToday('start');
+
+    if (pending.length > 0) {
+      // 미완료 이벤트 → DialogueScene 경유
+      this.scene.start('DialogueScene', {
+        eventId:  pending[0],
+        next:     'AtelierScene',
+        nextData: { save: this.saveData },
+      });
+    } else {
+      // 이미 다 봤거나 이벤트 없음 → 바로 공방
+      this.scene.start('AtelierScene', { save: this.saveData });
+    }
   }
 }
