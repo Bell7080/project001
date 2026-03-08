@@ -7,7 +7,7 @@
 //  스프라이트 시트 구조:
 //    Sd_Character_Sheet_001.png → char_000 ~ char_035 (6x6 = 36개)
 //    Sd_Character_Sheet_002.png → char_036 ~ char_071 (6x6 = 36개)
-//    총 72개
+//    총 72개  ※ 두 시트 모두 998 x 1498 동일 크기
 //
 //  사용법:
 //    [LoadingScene.preload]  CharacterSpriteManager.preload(this);
@@ -23,19 +23,18 @@ const CharacterSpriteManager = (() => {
   const SHEET_1_PATH = 'Games/Assets/Sprites/Sd_Character_Sheet_001.png';
   const SHEET_2_PATH = 'Games/Assets/Sprites/Sd_Character_Sheet_002.png';
 
-  // ── 실제 픽셀 경계 (brightness 분석으로 확정된 값) ────────
-  const ROWS_1 = [[6,133],[129,259],[260,378],[384,500],[503,622],[626,744]];
-  const COLS_1 = [[11,75],[92,155],[173,236],[257,316],[338,396],[415,481]];
+  // ── 실제 픽셀 경계 (998 x 1498 기준, 원본 × 2 업스케일) ──
+  const ROWS_1 = [[12,266],[258,518],[520,756],[768,1000],[1006,1244],[1252,1488]];
+  const COLS_1 = [[22,150],[184,310],[346,472],[514,632],[676,792],[830,962]];
 
-  const ROWS_2 = [[13,140],[154,288],[296,429],[438,563],[582,707],[720,845]];
-  const COLS_2 = [[19,85],[113,176],[205,265],[296,358],[387,451],[478,543]];
+  const ROWS_2 = [[12,266],[258,518],[520,756],[768,1000],[1006,1244],[1252,1488]];
+  const COLS_2 = [[22,150],[184,310],[346,472],[514,632],[676,792],[830,962]];
 
   // 출력 셀 크기 (패딩 포함 통일 캔버스)
-  const CELL_W = 76;
-  const CELL_H = 140;
+  const CELL_W = 152;
+  const CELL_H = 280;
 
   // ── preload ───────────────────────────────────────────────
-  // spritesheet 아닌 일반 image로 로드 → getSourceImage() 안정성 확보
   function preload(scene) {
     if (!scene.textures.exists(SHEET_1_KEY)) {
       scene.load.image(SHEET_1_KEY, SHEET_1_PATH);
@@ -46,7 +45,6 @@ const CharacterSpriteManager = (() => {
   }
 
   // ── extractToTextures ─────────────────────────────────────
-  // LoadingScene.create() 안에서 한 번 호출
   function extractToTextures(scene) {
     _extractSheet(scene, SHEET_1_KEY, ROWS_1, COLS_1, 0);
     _extractSheet(scene, SHEET_2_KEY, ROWS_2, COLS_2, 36);

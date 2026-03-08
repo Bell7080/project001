@@ -4,6 +4,11 @@
 //
 //  역할: Phase 4 — 커스터마이징 (스탯/외형/패시브/스킬 재설정 + 확정)
 //  의존: Recruit_Data.js, Recruit_Popup.js, Tab_Recruit.js(this)
+//
+//  ✏️ 수정:
+//    - _confirmHire: _unlockTabs() 호출 추가 (탭 잠금 해제 버그 수정)
+//    - 영입 확정 버튼: 크게 + 글로우 애니메이션
+//    - 영입 완료 시: 바로 창 닫힘 + 화면 중앙 투명 팝업 텍스트
 // ================================================================
 
 Tab_Recruit.prototype._buildCustom = function () {
@@ -49,10 +54,8 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
   sep.lineBetween(cx - bw*0.38, cy - bh*0.16, cx + bw*0.38, cy - bh*0.16);
   this._container.add(sep);
 
-  // 이름 필드 (스탯 위)
   this._buildNameField(cx, cy - bh*0.10, bw);
 
-  // 스탯 목록
   this._statTexts = [];
   RECRUIT_STAT_LABELS.forEach((label, i) => {
     const y = cy - bh*0.01 + i * (bh * 0.088);
@@ -74,14 +77,13 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   bg.fillRect(cx-bw/2, cy-bh/2, bw, bh); bg.strokeRect(cx-bw/2, cy-bh/2, bw, bh);
   this._container.add(bg);
 
-  // 패딩 기준 좌상단 커서 방식으로 배치
   const pad  = bw * 0.07;
-  const boxL = cx - bw/2 + pad;       // 콘텐츠 좌측 x
-  const boxW = bw - pad * 2;          // 콘텐츠 너비
-  let   curY = cy - bh/2 + pad;       // 현재 y 커서
+  const boxL = cx - bw/2 + pad;
+  const boxW = bw - pad * 2;
+  let   curY = cy - bh/2 + pad;
 
-  // ── 초상화 박스 (콘텐츠 가로 꽉 채움) ─────────────────────
-  const iH = bw * 0.62;               // 초상화 높이 (가로보다 약간 짧게)
+  // ── 초상화 박스 ─────────────────────────────────────────────
+  const iH = bw * 0.62;
   const iY = curY + iH/2;
   const iBg = scene.add.graphics();
   iBg.fillStyle(0x1e1008, 1); iBg.lineStyle(1, 0x3d2010, 1);
@@ -106,8 +108,7 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
     `스탯 재설정  🎲  ${this.rerolls.stat}`, () => this._rerollStats(), btnH);
   curY += btnH + pad * 1.4;
 
-  // ── makeBox 헬퍼 (CharProfile 양식) ────────────────────────
-  // 제목 + 이름(굵게) + 재설정 버튼
+  // ── 패시브/스킬 박스 ────────────────────────────────────────
   const makeAbilBox = (titleStr, nameTxtRef, nameVal, rerollCount, rerollCb, btnRef) => {
     const titleH = parseInt(this._fs(10));
     const nameH  = parseInt(this._fs(14));
@@ -121,20 +122,17 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
     boxG.fillRect(boxL, curY, boxW, boxH);
     this._container.add(boxG);
 
-    // 라벨
     this._container.add(scene.add.text(boxL + innerPad, curY + innerPad, titleStr, {
       fontSize: this._fs(9), fill: '#5a3818', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
 
-    // 능력명
     const nameTxt = scene.add.text(
       boxL + innerPad, curY + innerPad + titleH + 4, nameVal, {
       fontSize: this._fs(13), fill: '#e8c060', fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0);
     this._container.add(nameTxt);
-    nameTxtRef.ref = nameTxt;  // 외부에서 setText 가능하도록
+    nameTxtRef.ref = nameTxt;
 
-    // 재설정 버튼
     const btnY2 = curY + innerPad + titleH + 4 + nameH + 6 + btnH/2;
     const btn = this._makeRerollBtn(
       boxL + boxW/2, btnY2, boxW - innerPad*2,
@@ -144,40 +142,87 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
     curY += boxH + pad * 0.8;
   };
 
-  // 패시브
   const pRef = {}; const pBtn = {};
   makeAbilBox('PASSIVE', pRef, result.passive, this.rerolls.passive, () => this._rerollPassive(), pBtn);
   this._passiveTxtRef = pRef;
   this._passiveBtn = pBtn.ref;
 
-  // 스킬
   const sRef = {}; const sBtn = {};
   makeAbilBox('SKILL', sRef, result.skill, this.rerolls.skill, () => this._rerollSkill(), sBtn);
   this._skillTxtRef = sRef;
   this._skillBtn = sBtn.ref;
 
-  // ── 영입 확정 버튼 ──────────────────────────────────────────
+  // ── 영입 확정 버튼 (크게 + 글로우) ─────────────────────────
   curY += pad * 0.4;
-  const cfH2 = 30;
-  const cfBg = scene.add.graphics();
-  const drawCf = (h) => {
+  const cfH2  = parseInt(this._fs(38));
+  const cfBg  = scene.add.graphics();
+  const cfGlow = scene.add.graphics();
+
+  const drawCf = (state) => {
     cfBg.clear();
-    cfBg.fillStyle(h ? 0xa05018 : 0x3d2010, 1);
-    cfBg.lineStyle(1, 0xa05018, 1);
+    if (state === 'hover') {
+      cfBg.fillStyle(0xc06020, 1);
+      cfBg.lineStyle(2, 0xf0a040, 1);
+    } else if (state === 'down') {
+      cfBg.fillStyle(0x602010, 1);
+      cfBg.lineStyle(2, 0x904020, 1);
+    } else {
+      cfBg.fillStyle(0x7a3010, 1);
+      cfBg.lineStyle(2, 0xc07030, 0.95);
+    }
     cfBg.fillRect(boxL, curY, boxW, cfH2);
     cfBg.strokeRect(boxL, curY, boxW, cfH2);
   };
-  drawCf(false);
+
+  const drawCfGlow = (intensity) => {
+    cfGlow.clear();
+    [
+      { pad: 10, alpha: 0.06 * intensity, col: 0xc86020 },
+      { pad:  6, alpha: 0.15 * intensity, col: 0xd07030 },
+      { pad:  3, alpha: 0.28 * intensity, col: 0xa05018 },
+      { pad:  1, alpha: 0.52 * intensity, col: 0x8a3a10 },
+    ].forEach(({ pad: p, alpha, col }) => {
+      cfGlow.lineStyle(2, col, alpha);
+      cfGlow.strokeRect(boxL - p, curY - p, boxW + p*2, cfH2 + p*2);
+    });
+  };
+
+  drawCf('normal');
   this._container.add(cfBg);
-  this._container.add(scene.add.text(boxL + boxW/2, curY + cfH2/2, '영 입  확 정', {
-    fontSize: this._fs(13), fill: '#c8a070', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5));
+  this._container.add(cfGlow);
+
+  // 글로우 펄스 애니메이션
+  const go = { v: 0 };
+  const glowTween = this._tween({
+    targets: go, v: 1, duration: 600, ease: 'Sine.easeOut',
+    onUpdate: () => drawCfGlow(go.v),
+    onComplete: () => {
+      this._tween({
+        targets: go, v: { from: 1, to: 0.3 },
+        duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        onUpdate: () => drawCfGlow(go.v),
+      });
+    },
+  });
+
+  const cfTxt = scene.add.text(boxL + boxW/2, curY + cfH2/2, '영 입  확 정', {
+    fontSize: this._fs(15), fill: '#f0d090', fontFamily: FontManager.TITLE,
+  }).setOrigin(0.5);
+  this._container.add(cfTxt);
+
+  // 텍스트 펄스
+  this._tween({
+    targets: cfTxt, alpha: { from: 1, to: 0.65 },
+    duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+  });
+
   const cfHit = scene.add.rectangle(boxL + boxW/2, curY + cfH2/2, boxW, cfH2, 0, 0)
     .setInteractive({ useHandCursor: true });
   this._container.add(cfHit);
-  cfHit.on('pointerover', () => drawCf(true));
-  cfHit.on('pointerout',  () => drawCf(false));
-  cfHit.on('pointerdown', () => this._confirmHire());
+  cfHit.on('pointerover',  () => { drawCf('hover');  cfTxt.setStyle({ fill: '#ffffff' }); });
+  cfHit.on('pointerout',   () => { drawCf('normal'); cfTxt.setStyle({ fill: '#f0d090' }); });
+  cfHit.on('pointerdown',  () => { drawCf('down');   cfTxt.setStyle({ fill: '#c8a060' }); });
+  cfHit.on('pointerup',    () => this._confirmHire());
 };
 
 // ── 스프라이트 박스 렌더링 ────────────────────────────────────────
@@ -293,7 +338,7 @@ Tab_Recruit.prototype._rerollSkill = function () {
 // ── 영입 확정 ────────────────────────────────────────────────────
 
 Tab_Recruit.prototype._confirmHire = function () {
-  const { result } = this;
+  const { result, scene, W, H } = this;
   const statObj = {};
   RECRUIT_STAT_KEYS.forEach((k, i) => { statObj[k] = result.stats[i]; });
 
@@ -313,6 +358,76 @@ Tab_Recruit.prototype._confirmHire = function () {
     spriteKey: result.spriteKey,
   });
 
-  this._toast(`${result.name}  영입 완료!`);
-  this._delay(900, () => this._buildReady());
+  // ✏️ 탭 잠금 즉시 해제 + 화면 전환
+  this._unlockTabs();
+  this._buildReady();
+
+  // ✏️ 화면 중앙 완료 팝업 (투명 배경 위 텍스트)
+  this._showHireCompletePopup(result.name);
+};
+
+// ── 영입 완료 중앙 팝업 ──────────────────────────────────────────
+
+Tab_Recruit.prototype._showHireCompletePopup = function (name) {
+  const { scene, W, H } = this;
+  const cx = W / 2;
+  const cy = H / 2;
+  const depth = 200;
+
+  // 반투명 오버레이
+  const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0)
+    .setOrigin(0).setDepth(depth);
+
+  // 메인 텍스트
+  const mainTxt = scene.add.text(cx, cy - parseInt(scaledFontSize(10, scene.scale)),
+    `${name}  영입 완료`, {
+    fontSize: scaledFontSize(28, scene.scale),
+    fill: '#e8c070',
+    fontFamily: FontManager.TITLE,
+    stroke: '#0a0604',
+    strokeThickness: 6,
+  }).setOrigin(0.5).setAlpha(0).setDepth(depth + 1);
+
+  // 서브 텍스트
+  const subTxt = scene.add.text(cx, cy + parseInt(scaledFontSize(18, scene.scale)),
+    '새로운 동료가 합류했습니다', {
+    fontSize: scaledFontSize(13, scene.scale),
+    fill: '#8a6030',
+    fontFamily: FontManager.MONO,
+  }).setOrigin(0.5).setAlpha(0).setDepth(depth + 1);
+
+  // 텍스트 뒤 흐릿한 검은 박스
+  const boxW = parseInt(scaledFontSize(200, scene.scale));
+  const boxH = parseInt(scaledFontSize(60, scene.scale));
+  const boxCy = cy + parseInt(scaledFontSize(4, scene.scale));
+  const msgBox = scene.add.graphics().setDepth(depth + 0.5).setAlpha(0);
+  msgBox.fillStyle(0x000000, 0.55);
+  msgBox.fillRoundedRect(cx - boxW / 2, boxCy - boxH / 2, boxW, boxH, 12);
+  // 테두리 (흐릿한 황금빛)
+  msgBox.lineStyle(1, 0x6b4a18, 0.4);
+  msgBox.strokeRoundedRect(cx - boxW / 2, boxCy - boxH / 2, boxW, boxH, 12);
+
+  // 페이드인
+  scene.tweens.add({
+    targets: overlay, alpha: 0.55, duration: 200, ease: 'Sine.easeOut',
+  });
+  scene.tweens.add({
+    targets: [msgBox, mainTxt, subTxt], alpha: 1,
+    duration: 220, ease: 'Sine.easeOut',
+    onComplete: () => {
+      // 1.4초 후 페이드아웃
+      scene.time.delayedCall(1400, () => {
+        scene.tweens.add({
+          targets: [overlay, msgBox, mainTxt, subTxt],
+          alpha: 0, duration: 380, ease: 'Sine.easeIn',
+          onComplete: () => {
+            overlay.destroy();
+            msgBox.destroy();
+            mainTxt.destroy();
+            subTxt.destroy();
+          },
+        });
+      });
+    },
+  });
 };

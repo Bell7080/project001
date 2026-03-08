@@ -7,8 +7,8 @@ class AtelierScene extends Phaser.Scene {
   constructor() { super({ key: 'AtelierScene' }); }
 
   init(data) {
-    this._activeTab  = data.tab  || 'explore';
-    this._fromScene  = data.from || 'LobbyScene';
+    this._activeTab   = data.tab  || 'explore';
+    this._fromScene   = data.from || 'LobbyScene';
     this._skipWelcome = data.skipWelcome || false;
   }
 
@@ -24,24 +24,52 @@ class AtelierScene extends Phaser.Scene {
     this._buildBackground(W, H);
     this._buildHUD(W, H);
     this._sideButtonRefs = [];
+    this._uiAnimTargets  = [];
     this._buildSideButtons(W, H);
     this._buildTopButtons(W, H);
 
     this._currentTabObj = null;
     this._switchTab(this._activeTab, true);
 
-    // ── 웰컴 팝업 연동 ─────────────────────────────────────
-    // LobbyScene(새 게임 / 불러오기)에서 처음 진입할 때만 표시
-    // AtelierScene 내부 탭 전환 시에는 skipWelcome=true로 재시작하므로 표시 안 함
     if (!this._skipWelcome && this._fromScene === 'LobbyScene') {
       this._showWelcome();
+    } else {
+      this._animateUIIn(true);
     }
   }
 
-  // ── 웰컴 팝업 표시 ──────────────────────────────────────────
+  // ── 웰컴 팝업 ────────────────────────────────────────────────
+  // onClose = 타이핑 완료 콜백 → UI 슬라이드인
+  // _welcomeObj는 탭 클릭 시 _switchTab → build()에서 destroy
   _showWelcome() {
     this._welcomeObj = new Tab_Welcome(this, this.W, this.H, () => {
-      this._welcomeObj = null;
+      // 타이핑 완료 → UI 슬라이드인 (웰컴 팝업은 그대로 유지)
+      this._animateUIIn(false);
+    });
+  }
+
+  // ── UI 등장 애니메이션 ────────────────────────────────────────
+  _animateUIIn(instant) {
+    if (!this._uiAnimTargets) return;
+
+    this._uiAnimTargets.forEach(({ obj, originX, originY, dir, delay }) => {
+      if (!obj || !obj.scene) return;
+
+      if (instant) {
+        obj.setAlpha(1).setPosition(originX, originY);
+        return;
+      }
+
+      const offX = dir === 'left' ? -80 : dir === 'right' ? 80 : 0;
+      const offY = dir === 'up'   ? -50 : dir === 'down'  ? 50 : 0;
+
+      obj.setAlpha(0).setPosition(originX + offX, originY + offY);
+      this.tweens.add({
+        targets: obj,
+        x: originX, y: originY, alpha: 1,
+        duration: 320, delay: delay || 0,
+        ease: 'Back.easeOut',
+      });
     });
   }
 
@@ -65,27 +93,34 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _buildHUD(W, H) {
-    new AtelierHUD(this, W, H);
+    this._hud = new AtelierHUD(this, W, H);
   }
 
   _switchTab(key, instant = false) {
+    // 웰컴이 살아있거나 다른 탭이면 전환 허용
     if (!instant && key === this._activeTab && !this._welcomeObj) return;
 
     const W = this.W;
     const H = this.H;
 
     const TabMap = {
-      // Tab_Recruit → Games/Codes/Scenes/Atelier/tabs/Tab_Recruit.js (Tab_Stubs에서 분리)
       explore: Tab_Explore, recruit: Tab_Recruit, manage: Tab_Manage, squad: Tab_Squad,
       facility: Tab_Facility, outsource: Tab_Outsource, dredge: Tab_Dredge,
       shop: Tab_Shop, storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
     };
 
     const build = () => {
+      // ── 웰컴 팝업 페이드아웃 후 destroy ─────────────────────
       if (this._welcomeObj) {
-        this._welcomeObj.destroy();
+        const wo = this._welcomeObj;
         this._welcomeObj = null;
+        this.tweens.add({
+          targets: wo._container,
+          alpha: 0, duration: 200, ease: 'Sine.easeIn',
+          onComplete: () => wo.destroy(),
+        });
       }
+
       if (this._currentTabObj) {
         this._currentTabObj.destroy();
         this._currentTabObj = null;
@@ -141,24 +176,24 @@ class AtelierScene extends Phaser.Scene {
       const refs = this._makeSideButton(
         item.label, W * 0.07,
         H * 0.25 + i * parseInt(scaledFontSize(52, this.scale)),
-        item.key, false
+        item.key, false, i
       );
       this._sideButtonRefs.push({ key: item.key, ...refs });
     });
 
     const rightItems = [
-      { key: 'recruit',  label: '영  입'   },
-      { key: 'manage',   label: '관  리'   },
-      { key: 'squad',    label: '탐 사 대' },
-      { key: 'facility', label: '시  설'   },
-      { key: 'outsource',label: '외  주'   },
-      { key: 'dredge',   label: '드 레 지' },
+      { key: 'recruit',   label: '영  입'   },
+      { key: 'manage',    label: '관  리'   },
+      { key: 'squad',     label: '탐 사 대' },
+      { key: 'facility',  label: '시  설'   },
+      { key: 'outsource', label: '외  주'   },
+      { key: 'dredge',    label: '드 레 지' },
     ];
     rightItems.forEach((item, i) => {
       const refs = this._makeSideButton(
         item.label, W * 0.93,
         H * 0.22 + i * parseInt(scaledFontSize(52, this.scale)),
-        item.key, true
+        item.key, true, i
       );
       this._sideButtonRefs.push({ key: item.key, ...refs });
     });
@@ -166,7 +201,7 @@ class AtelierScene extends Phaser.Scene {
     this._makeExploreButton(W / 2, H * 0.86);
   }
 
-  _makeSideButton(label, x, y, key, alignRight) {
+  _makeSideButton(label, x, y, key, alignRight, idx) {
     const isActive = this._activeTab === key;
     const indent   = parseInt(scaledFontSize(18, this.scale));
     const shift    = parseInt(scaledFontSize(8, this.scale));
@@ -177,14 +212,15 @@ class AtelierScene extends Phaser.Scene {
         fill: isActive ? '#c06820' : '#4a2a10',
         fontFamily: FontManager.MONO,
       }
-    ).setOrigin(alignRight ? 0 : 1, 0.5);
+    ).setOrigin(alignRight ? 0 : 1, 0.5).setAlpha(0);
 
     const btn = this.add.text(x, y, label, {
       fontSize: scaledFontSize(26, this.scale),
       fill: isActive ? '#e8c080' : '#7a5030',
       fontFamily: FontManager.TITLE,
     }).setOrigin(alignRight ? 1 : 0, 0.5)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true })
+      .setAlpha(0);
 
     const underline = this.add.graphics();
     const origX = x;
@@ -216,6 +252,11 @@ class AtelierScene extends Phaser.Scene {
     });
     btn.on('pointerdown', () => this._switchTab(key));
 
+    const dir = alignRight ? 'right' : 'left';
+    const delay = 80 + idx * 40;
+    this._uiAnimTargets.push({ obj: btn,    originX: x, originY: y, dir, delay });
+    this._uiAnimTargets.push({ obj: marker, originX: alignRight ? x + indent : x - indent, originY: y, dir, delay: delay + 20 });
+
     return { btn, marker };
   }
 
@@ -233,13 +274,13 @@ class AtelierScene extends Phaser.Scene {
       fontSize: scaledFontSize(18, this.scale),
       fill: this._activeTab === 'explore' ? '#c06820' : '#4a2a10',
       fontFamily: FontManager.MONO,
-    }).setOrigin(1, 0.5);
+    }).setOrigin(1, 0.5).setAlpha(0);
 
     const btn = this.add.text(x, y, '탐    색', {
       fontSize: scaledFontSize(28, this.scale),
       fill: this._activeTab === 'explore' ? '#e8c080' : '#7a5030',
       fontFamily: FontManager.TITLE,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
 
     this._sideButtonRefs.push({ key: 'explore', btn, marker });
 
@@ -257,6 +298,9 @@ class AtelierScene extends Phaser.Scene {
       marker.setStyle({ fill: '#4a2a10' });
     });
     btn.on('pointerdown', () => this._switchTab('explore'));
+
+    this._uiAnimTargets.push({ obj: btn,    originX: x, originY: y, dir: 'down', delay: 200 });
+    this._uiAnimTargets.push({ obj: marker, originX: x - parseInt(scaledFontSize(36, this.scale)), originY: y, dir: 'down', delay: 220 });
   }
 
   _buildTopButtons(W, H) {
@@ -266,15 +310,18 @@ class AtelierScene extends Phaser.Scene {
 
     const settingW = parseInt(scaledFontSize(60, this.scale));
     const settingX = W - W * 0.022 - settingW / 2;
-    this._makeTopBtn(settingX, by, settingW, bh, '설  정', () => {
-      // skipWelcome: true 로 재시작해 웰컴 팝업이 다시 뜨지 않도록 함
+    const settingObjs = this._makeTopBtn(settingX, by, settingW, bh, '설  정', () => {
       this.scene.start('SettingsScene', { from: 'AtelierScene' });
     });
 
     const lobbyW = parseInt(scaledFontSize(60, this.scale));
     const lobbyX = settingX - settingW / 2 - gap - lobbyW / 2;
-    this._makeTopBtn(lobbyX, by, lobbyW, bh, '← 로비', () => {
+    const lobbyObjs = this._makeTopBtn(lobbyX, by, lobbyW, bh, '← 로비', () => {
       this._goLobby();
+    });
+
+    [settingObjs, lobbyObjs].forEach(({ hit }, i) => {
+      if (hit) this._uiAnimTargets.push({ obj: hit, originX: hit.x, originY: by, dir: 'up', delay: i * 40 });
     });
 
     this.input.keyboard.on('keydown-ESC', () => {
@@ -304,6 +351,8 @@ class AtelierScene extends Phaser.Scene {
     hit.on('pointerover', () => draw(true));
     hit.on('pointerout',  () => draw(false));
     hit.on('pointerdown', onClick);
+
+    return { bg, hit };
   }
 
   _goLobby() {

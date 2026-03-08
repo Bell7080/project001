@@ -5,6 +5,10 @@
 //  역할: 탐사대 탭 — 3×3 배치 격자 + 잠수정 칸
 //        셀 클릭 시 마지막 캐릭터 회수
 //
+//  ✏️ 수정:
+//    - 슬롯 캐릭터 행에 spriteKey 일러스트 표시 (좌측)
+//    - 중복 배치 방지: _isCharDeployed() 헬퍼 추가
+//
 //  의존: Tab_Squad.js (prototype 확장)
 // ================================================================
 
@@ -91,7 +95,6 @@ Object.assign(Tab_Squad.prototype, {
     const MAX   = 3;
 
     const JOB_COLOR  = { fisher: 0x1e3a5c, diver: 0x1e3d28, ai: 0x2e2248 };
-    const JOB_ABBR   = { fisher: 'F', diver: 'D', ai: 'A' };
 
     const HEADER_R = isSub ? 0.28 : 0.0;
     const headerH  = size * HEADER_R;
@@ -141,7 +144,7 @@ Object.assign(Tab_Squad.prototype, {
       );
     }
 
-    // ── 캐릭터 미니 행 ──────────────────────────────────────────
+    // ── 캐릭터 행 (일러스트 + 이름) ─────────────────────────────
     for (let i = 0; i < MAX; i++) {
       const rowTop = T + headerH + rowH * i;
       const rowMid = rowTop + rowH / 2;
@@ -175,12 +178,25 @@ Object.assign(Tab_Squad.prototype, {
         hpFg2.fillRect(hpBX, hpBY, Math.max(1, Math.round(hpBW * hpPct)), hpBH);
         this._container.add([hpBg2, hpFg2]);
 
-        // 이름
+        // ── 일러스트 (좌측) ──────────────────────────────────────
+        const iconSize = rowH * 0.82;
+        const iconX    = L + iconSize * 0.55;
+        const iconY    = rowMid - 1;
+
+        if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
+          const img = scene.add.image(iconX, iconY, char.spriteKey).setOrigin(0.5);
+          const sc  = Math.min(iconSize / img.width, iconSize / img.height) * 0.92;
+          img.setScale(sc);
+          this._container.add(img);
+        }
+
+        // ── 이름 텍스트 (일러스트 우측) ─────────────────────────
+        const nameX = L + iconSize * 1.15;
         this._container.add(
-          scene.add.text(cx, rowMid - 1, `${JOB_ABBR[char.job] || '?'}  ${char.name}`, {
+          scene.add.text(nameX, rowMid - 1, char.name, {
             fontSize: scaledFontSize(6.5, scene.scale),
             fill: '#c8a060', fontFamily: FontManager.MONO,
-          }).setOrigin(0.5, 0.5)
+          }).setOrigin(0, 0.5)
         );
 
       } else {
@@ -218,7 +234,7 @@ Object.assign(Tab_Squad.prototype, {
       }).setOrigin(1, 0)
     );
 
-    // ── 히트 영역 (클릭 = 마지막 캐릭터 회수) ───────────────────
+    // ── 히트 영역 ───────────────────────────────────────────────
     const hit = scene.add.rectangle(cx, cy, size, size, 0, 0)
       .setInteractive({ useHandCursor: count > 0 });
     hit.on('pointerover', () => {
@@ -232,6 +248,11 @@ Object.assign(Tab_Squad.prototype, {
     this._container.add(hit);
 
     return { idx, drawCell, cellBg, hit };
+  },
+
+  // ── 캐릭터가 이미 어딘가에 배치되어 있는지 확인 ──────────────
+  _isCharDeployed(charId) {
+    return this._squad.some(slot => Array.isArray(slot) && slot.includes(charId));
   },
 
   // ── 마지막 캐릭터 회수 ──────────────────────────────────────

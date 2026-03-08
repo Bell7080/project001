@@ -1,6 +1,11 @@
 // ================================================================
 //  Tab_Welcome.js
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Welcome.js
+//
+//  ✏️ 수정:
+//    - 타이핑 완료 → onClose() 호출 (UI 슬라이드인 트리거)
+//    - 팝업은 닫히지 않고 그대로 유지
+//    - 유저가 탭을 선택하면 AtelierScene._switchTab에서 자동 destroy
 // ================================================================
 
 class Tab_Welcome {
@@ -18,7 +23,6 @@ class Tab_Welcome {
   _build() {
     const { scene, W, H } = this;
 
-    // ── Tab_Explore와 동일한 패널 기준 ───────────────────────────
     const cx     = W / 2;
     const cy     = H * 0.52;
     const panelW = W * 0.60;
@@ -74,19 +78,16 @@ class Tab_Welcome {
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0);
 
-    // ── container에 추가 ────────────────────────────────────────
-    this._container.add([
-      panel, deco, labelTxt, lineG,
-      txt,
-    ]);
+    this._container.add([panel, deco, labelTxt, lineG, txt]);
 
-    // ── 타이핑 시퀀스 ──────────────────────────────────────────
+    // ── 타이핑 완료 → onClose 호출 (팝업은 그대로 유지) ────────
     this._delay(80, () => {
-      this._typeText(txt, fullTxt, 52);
+      this._typeText(txt, fullTxt, 52, () => {
+        if (this.onClose) this.onClose();
+      });
     });
   }
 
-  // ── 타이핑 효과 ─────────────────────────────────────────────
   _typeText(textObj, fullText, charDelay, onDone) {
     textObj.setAlpha(1).setText('');
     const chars = [...fullText];

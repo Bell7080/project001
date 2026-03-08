@@ -4,13 +4,9 @@
 //
 //  역할: 탐사대 탭 — 드래그 앤 드롭 전역 처리
 //
-//  ── 전역 포인터 위임 방식 ────────────────────────────────────
-//  카드(hit)는 pointerdown 시 드래그 대상을 씬에 등록하는
-//  신호만 발신한다. 이후 고스트 이동·드롭 판정·셀 발광은
-//  씬 전역 리스너(_setupDragListeners)가 단독으로 처리한다.
-//
-//  카드별 pointermove 핸들러가 없으므로, 드래그 중 다른 카드
-//  위를 지나가도 이벤트 간섭이 발생하지 않는다.
+//  ✏️ 수정:
+//    - _dropDrag: 다른 슬롯에 이미 배치된 캐릭터 중복 배치 방지
+//      (_isCharDeployed 사용 — Grid.js에 정의)
 //
 //  의존: Tab_Squad.js (prototype 확장)
 // ================================================================
@@ -18,8 +14,6 @@
 Object.assign(Tab_Squad.prototype, {
 
   // ── 드래그 시작 ──────────────────────────────────────────────
-  // 카드의 pointerdown → pointermove 임계치 초과 시 호출
-  // 이미 드래그 중이면 진입 차단
   _startDrag(char, ptr) {
     if (this._dragGhost) return;
 
@@ -28,7 +22,6 @@ Object.assign(Tab_Squad.prototype, {
     const ch = parseInt(scaledFontSize(68, scene.scale));
 
     const JOB_COLOR  = { fisher: 0x1a3050, diver: 0x1a3020, ai: 0x2a1a3a };
-    const JOB_BORDER = { fisher: 0x3a6888, diver: 0x3a7050, ai: 0x6a4888 };
     const JOB_SHORT  = { fisher: 'FISH',   diver: 'DIVE',   ai: 'A·I'   };
 
     const g = scene.add.container(ptr.x - cw / 2, ptr.y - ch * 0.3).setDepth(600);
@@ -54,7 +47,6 @@ Object.assign(Tab_Squad.prototype, {
     g.add([bg, icon, nm, cog]);
     scene.tweens.add({ targets: g, alpha: 0.88, duration: 80 });
 
-    // 상태 등록 — 이 시점부터 전역 리스너가 제어권을 가짐
     this._dragGhost     = g;
     this._dragChar      = char;
     this._dragCharId    = char.id;
@@ -64,7 +56,7 @@ Object.assign(Tab_Squad.prototype, {
     this._clearCellGlow();
   },
 
-  // ── 드래그 이동 (전역 pointermove에서 호출) ──────────────────
+  // ── 드래그 이동 ──────────────────────────────────────────────
   _moveDrag(ptr) {
     if (!this._dragGhost) return;
     const cw = this._dragGhost.list[0]?.width  || 64;
@@ -96,11 +88,9 @@ Object.assign(Tab_Squad.prototype, {
     const cs      = this._cellSize;
     const subHalf = this._subSize / 2;
 
-    // 잠수정 칸
     if (Math.abs(px - this._subCx) < subHalf && Math.abs(py - this._subCy) < subHalf) {
       return 9;
     }
-    // 3×3 격자
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 3; col++) {
         const cellCx = this._gridX + col * cs + cs / 2;
@@ -161,7 +151,7 @@ Object.assign(Tab_Squad.prototype, {
     }
   },
 
-  // ── 드롭 처리 (전역 pointerup에서 호출) ─────────────────────
+  // ── 드롭 처리 ────────────────────────────────────────────────
   _dropDrag(ptr) {
     this._clearCellGlow();
     const char = this._dragChar;
@@ -172,12 +162,22 @@ Object.assign(Tab_Squad.prototype, {
     if (hitIdx === null) return;
 
     const slot = this._squad[hitIdx] || [];
+
+    // 슬롯 최대 인원 초과
     if (slot.length >= 3) {
       this._showToast('해당 칸은 이미 가득 찼습니다 (최대 3명)');
       return;
     }
+
+    // 같은 슬롯 내 중복
     if (slot.includes(char.id)) {
       this._showToast('이미 같은 칸에 배치된 캐릭터입니다');
+      return;
+    }
+
+    // ✏️ 다른 슬롯에 이미 배치된 캐릭터 중복 배치 방지
+    if (this._isCharDeployed(char.id)) {
+      this._showToast(`${char.name}은(는) 이미 다른 칸에 배치되어 있습니다`);
       return;
     }
 
@@ -189,7 +189,6 @@ Object.assign(Tab_Squad.prototype, {
   },
 
   // ── 전역 드래그 리스너 설정 ──────────────────────────────────
-  // 슬라이더 가로 스크롤 + 드래그 앤 드롭을 단일 리스너 세트로 처리
   _setupDragListeners() {
     const { scene } = this;
     const { _sliderAreaX: aX, _sliderAreaY: aY, _sliderAreaW: aW, _sliderAreaH: aH } = this;
@@ -198,9 +197,7 @@ Object.assign(Tab_Squad.prototype, {
     const inArea = (ptr) =>
       ptr.x >= aX && ptr.x <= aX + aW && ptr.y >= aY && ptr.y <= aY + aH;
 
-    // ── pointerdown ─────────────────────────────────────────────
     this._sliderOnDown = (ptr) => {
-      // 드래그 중이면 슬라이더 스크롤 시작 차단
       if (this._dragGhost) return;
       if (!inArea(ptr)) return;
       startX = ptr.x;
@@ -208,9 +205,6 @@ Object.assign(Tab_Squad.prototype, {
       this._sliderDragged = false;
     };
 
-    // ── pointermove ─────────────────────────────────────────────
-    // 드래그 고스트가 있으면 고스트 이동만 처리
-    // 없으면 슬라이더 가로 스크롤 처리
     this._sliderOnMove = (ptr) => {
       if (this._dragGhost) {
         this._moveDrag(ptr);
@@ -226,8 +220,6 @@ Object.assign(Tab_Squad.prototype, {
       this._sliderRow.x  = aX + this._sliderOffset;
     };
 
-    // ── pointerup ───────────────────────────────────────────────
-    // 드래그 고스트가 있으면 드롭 판정 처리
     this._sliderOnUp = (ptr) => {
       if (this._dragGhost) {
         this._dropDrag(ptr);
@@ -236,7 +228,6 @@ Object.assign(Tab_Squad.prototype, {
       scene.time.delayedCall(50, () => { this._sliderDragged = false; });
     };
 
-    // ── wheel ────────────────────────────────────────────────────
     this._sliderOnWheel = (ptr, objs, dx, dy) => {
       if (!inArea(ptr)) return;
       const maxOff = -(Math.max(0, this._sliderTotalW - aW));
