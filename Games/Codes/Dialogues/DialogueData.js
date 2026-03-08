@@ -1,30 +1,212 @@
 // ================================================================
-//  DialogueData.js
+//  DialogueData.js  ← 자동 생성 — 직접 수정 금지
 //  경로: Games/Codes/Dialogues/DialogueData.js
 //
-//  ※ 이 파일은 convert_dialogue.js 실행 시 자동 생성됩니다.
-//    직접 수정하지 마세요.
-//
-//  갱신 방법:
-//    1. NeuralRust_Dialogue.xlsx 편집 (한셀)
-//    2. cd Games/Codes/Dialogues/Tools
-//    3. node convert_dialogue.js
+//  원본: NeuralRust_Dialogue.xlsx
+//  생성: node Tools/convert_dialogue.js
+//  생성일: 2026. 3. 8. 오전 6:32:33
 // ================================================================
 
-// ── 캐릭터 단축어 → 표시명 ──────────────────────────────────────
 const CAST_DATA = {
   "P": "Player"
 };
 
-// ── 이벤트 ID → BGM 파일명 ──────────────────────────────────────
-const BGM_DATA = {};
+const BGM_DATA = {
+  "이벤트 ID (시트명)": "BGM 파일명",
+  "Day_1_1": "bgm_calm_morning",
+  "Shop_Open": "bgm_shop_theme",
+  "Shop_In": "bgm_shop_theme"
+};
 
-// ── SFX 별칭 → 파일명 ───────────────────────────────────────────
-const SFX_DATA = {};
+const SFX_DATA = {
+  "별칭 (sfx 컬럼에 입력)": "SFX 파일명",
+  "Happy": "sfx_happy_001",
+  "Sad": "sfx_sad_001",
+  "Shock": "sfx_shock_001",
+  "Door": "sfx_door_open",
+  "Beep": "sfx_beep_alert",
+  "Typing": "sfx_typing_loop",
+  "Confirm": "sfx_confirm",
+  "Cancel": "sfx_cancel"
+};
 
-// ── 텍스트 강조 키워드 ───────────────────────────────────────────
-const KEYWORD_DATA = [];
+const KEYWORD_DATA = [
+  {
+    "word": "이형",
+    "color": "FF4444",
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "아크",
+    "color": "FFD700",
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "A.I",
+    "color": "5DD8F0",
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "effect": "glow"
+  },
+  {
+    "word": "탐사",
+    "color": "7FDD55",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "경고",
+    "color": "FF8800",
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "effect": "blink"
+  },
+  {
+    "word": "시스템",
+    "color": "BB88FF",
+    "bold": true,
+    "italic": false,
+    "underline": true,
+    "effect": "none"
+  },
+  {
+    "word": "???",
+    "color": "999999",
+    "bold": false,
+    "italic": true,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "ERROR",
+    "color": "FF2222",
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "effect": "shake"
+  },
+  {
+    "word": "기밀",
+    "color": "AAAAAA",
+    "bold": false,
+    "italic": false,
+    "underline": true,
+    "effect": "blur"
+  },
+  {
+    "word": "위험",
+    "color": "FF6600",
+    "bold": true,
+    "italic": false,
+    "underline": false,
+    "effect": "blink"
+  },
+  {
+    "word": "해제",
+    "color": "44FF88",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "연결",
+    "color": "5DD8F0",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "효과",
+    "color": "구현 방식",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "none",
+    "color": "setText + style color / bold / italic",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "glow",
+    "color": "PostFX: GlowFX Pipeline (Phaser 3.60+)",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "blink",
+    "color": "tweens: alpha 0↔1, repeat:-1, yoyo:true",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "shake",
+    "color": "tweens: x ±4px, yoyo:true, repeat:3",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "blur",
+    "color": "PostFX: BlurFX Pipeline (Phaser 3.60+)",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "rainbow",
+    "color": "tween: setTint 색상 배열 순환",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "wave",
+    "color": "custom: 글자별 GameObject, sin(time+i) y offset",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "typewriter",
+    "color": "dialogManager 해당 구간 delay 개별 설정",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  },
+  {
+    "word": "underline",
+    "color": "Graphics.lineBetween (text 하단 좌표 계산)",
+    "bold": false,
+    "italic": false,
+    "underline": false,
+    "effect": "none"
+  }
+];
 
-// ── 대화 이벤트 데이터 ───────────────────────────────────────────
-//  구조: { [eventId]: { lines: DialogueLine[], lineMap: { [id]: index } } }
 const DIALOGUE_DATA = {};
