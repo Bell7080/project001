@@ -236,9 +236,16 @@ class Tab_Manage {
     // ── 히트 영역 ────────────────────────────────────────────
     const hit = scene.add.rectangle(cw / 2, ch / 2, cw, ch, 0, 0)
       .setInteractive({ useHandCursor: true });
-    hit.on('pointerover', () => drawCbg(true));
+    hit.on('pointerover', (ptr) => {
+      const { _cardAreaX: aX, _cardAreaY: aY, _cardAreaW: aW, _cardAreaH: aH } = this;
+      if (ptr.x < aX || ptr.x > aX + aW || ptr.y < aY || ptr.y > aY + aH) return;
+      drawCbg(true);
+    });
     hit.on('pointerout',  () => drawCbg(false));
-    hit.on('pointerup',   () => {
+    hit.on('pointerup',   (ptr) => {
+      // 마스크 영역 밖 클릭 차단
+      const { _cardAreaX: aX, _cardAreaY: aY, _cardAreaW: aW, _cardAreaH: aH } = this;
+      if (ptr.x < aX || ptr.x > aX + aW || ptr.y < aY || ptr.y > aY + aH) return;
       if (this._dragged) return;
       if (this._openCharId === char.id) this._closePopup();
       else this._openPopup(char);

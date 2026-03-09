@@ -325,9 +325,10 @@ function _rRoll(currentPrice) {
   return {
     job,
     statSum:   finalSum,
-    baseSum:   statSum,   // 오버클럭 전 원본 스탯합 (UI 표시용)
+    baseSum:   statSum,     // 오버클럭 전 원본 스탯합 (UI 표시용)
     cog,
     stats:     finalStats,
+    baseStats: baseStats,   // 오버클럭 전 원본 스탯 배열 — 역산 불필요하게 직접 보존
     name:      _rFrom(RECRUIT_NAMES[job]),
     spriteKey: _rSpriteKey(),
     position:  _rFrom(posPool),

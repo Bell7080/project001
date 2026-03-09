@@ -22,7 +22,7 @@ Tab_Recruit.prototype._showStatPopup = function (prevStats, nextStats, onConfirm
   const cy = H / 2;
 
   const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0.80)
-    .setOrigin(0).setDepth(80);
+    .setOrigin(0).setDepth(80).setInteractive();  // 뒷배경 클릭 차단
   const pop = scene.add.container(0, 0).setDepth(81);
 
   const bW  = W * 0.26;
@@ -69,13 +69,7 @@ Tab_Recruit.prototype._showStatPopup = function (prevStats, nextStats, onConfirm
       } else {
         panelG.fillStyle(0x120d07, 1); panelG.lineStyle(1, 0x2a1a08, 0.7);
       }
-      // 오버클럭 박스 글로우 테두리
-      if (overclock) {
-        [{p:5,a:0.06},{p:3,a:0.14},{p:1,a:0.28}].forEach(({p,a})=>{
-          panelG.lineStyle(1, ocHex, a);
-          panelG.strokeRect(panelX-bW/2-p, bY-bH/2-p, bW+p*2, bH+p*2);
-        });
-      }
+      // ✏️ 오버클럭 패널 테두리 제거 (증감 박스로만 표현)
       panelG.fillRect(panelX - bW/2, bY - bH/2, bW, bH);
       panelG.strokeRect(panelX - bW/2, bY - bH/2, bW, bH);
     };
@@ -95,69 +89,95 @@ Tab_Recruit.prototype._showStatPopup = function (prevStats, nextStats, onConfirm
     pop.add(hlineG);
 
     // 오버클럭인 패널이라면 해당 행 glow 먼저 그리기
-    // prevBase/nextBase: 오버클럭 적용 전 원본값 배열
     const baseArr = isPrev ? prevBase : nextBase;
 
+    // ── 스탯 블록 (커스텀 박스 외형과 동일) ─────────────────────
+    const sbX  = panelX - bW * 0.42;
+    const sbW  = bW * 0.84;
+    const sbY0 = bY - bH * 0.28;
+    const rH   = rowH * 0.92;
+    const sbH  = rH * RECRUIT_STAT_LABELS.length;
+
+    // 블록 외곽 배경
+    const sbBg = scene.add.graphics();
+    sbBg.fillStyle(0x0e0b07, 1);
+    sbBg.lineStyle(1, 0x2a1a08, 0.7);
+    sbBg.fillRect(sbX, sbY0, sbW, sbH);
+    sbBg.strokeRect(sbX, sbY0, sbW, sbH);
+    pop.add(sbBg);
+
     RECRUIT_STAT_LABELS.forEach((label, i) => {
-      const ry      = bY - bH*0.28 + i * rowH;
+      const ry   = sbY0 + i * rH;
+      const midY = ry + rH * 0.5;
       const isOc    = i === ocIdx;
       const statCol = SC[SCO[i]] || '#c8bfb0';
 
-      // 오버클럭 행 배경 glow (양쪽 패널 모두)
-      if (isOc) {
-        const rowBg = scene.add.graphics();
-        rowBg.fillStyle(ocHex, 0.18);
-        rowBg.fillRect(panelX - bW/2 + 2, ry - rowH*0.45, bW - 4, rowH * 0.9);
-        rowBg.fillStyle(ocHex, 0.80);
-        rowBg.fillRect(panelX - bW/2 + 2, ry - rowH*0.45, 2, rowH * 0.9);
-        [{p:3,a:0.08},{p:1,a:0.28}].forEach(({p,a})=>{
-          rowBg.lineStyle(1, ocHex, a);
-          rowBg.strokeRect(panelX-bW/2+2-p, ry-rowH*0.45-p, bW-4+p*2, rowH*0.9+p*2);
-        });
-        pop.add(rowBg);
+      // 행 구분선
+      if (i > 0) {
+        const sg = scene.add.graphics();
+        sg.lineStyle(1, 0x1e1206, 0.5);
+        sg.lineBetween(sbX + 4, ry, sbX + sbW - 4, ry);
+        pop.add(sg);
       }
 
-      // 새로운 탭에서만 증감 박스 (오버클럭 행 제외한 일반 행)
-      if (!isPrev && !isOc) {
-        const diff = stats[i] - prevStats[i];
-        if (diff !== 0) {
-          const boxCol = diff > 0 ? 0x204820 : 0x481010;
-          const lineCol = diff > 0 ? 0x30a030 : 0xa03030;
-          const diffBg = scene.add.graphics();
+      // 오버클럭 행 좌측 강조선
+      if (isOc) {
+        const ocSlice = scene.add.graphics();
+        const slices  = 20;
+        const sliceW  = sbW / slices;
+        for (let s = 0; s < slices; s++) {
+          const alpha = 0.22 - (0.20 * s / (slices - 1));
+          ocSlice.fillStyle(ocHex, alpha);
+          ocSlice.fillRect(sbX + 1 + s * sliceW, ry + 1, Math.ceil(sliceW), rH - 2);
+        }
+        ocSlice.fillStyle(ocHex, 0.85);
+        ocSlice.fillRect(sbX + 1, ry + 1, 2, rH - 2);
+        pop.add(ocSlice);
+      }
+
+      // 새로운 탭 증감 배경
+      if (!isPrev) {
+        const prevBaseVal = prevBase ? prevBase[i] : prevStats[i];
+        const nextBaseVal = nextBase ? nextBase[i] : stats[i];
+        const baseDiff = nextBaseVal - prevBaseVal;
+        if (baseDiff !== 0) {
+          const boxCol  = baseDiff > 0 ? 0x204820 : 0x481010;
+          const lineCol = baseDiff > 0 ? 0x30a030 : 0xa03030;
+          const diffBg  = scene.add.graphics();
           diffBg.fillStyle(boxCol, 0.45);
-          diffBg.lineStyle(1, lineCol, 0.7);
-          diffBg.fillRect(panelX - bW/2 + 2, ry - rowH*0.45, bW - 4, rowH * 0.9);
-          diffBg.strokeRect(panelX - bW/2 + 2, ry - rowH*0.45, bW - 4, rowH * 0.9);
+          diffBg.lineStyle(1, lineCol, 0.5);
+          diffBg.fillRect(sbX + 2, ry + 1, sbW - 4, rH - 2);
+          diffBg.strokeRect(sbX + 2, ry + 1, sbW - 4, rH - 2);
           pop.add(diffBg);
         }
       }
 
-      // 스탯 라벨 (좌측정렬)
-      pop.add(scene.add.text(panelX - bW*0.42, ry, label, {
+      // 스탯 라벨
+      pop.add(scene.add.text(sbX + 8, midY, label, {
         fontSize: this._fs(13),
         fill: isOc ? ocColor : statCol + 'cc',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5));
 
-      // 수치: 오버클럭이면 양쪽 모두 "기본→유효값"
+      // 수치
       const rawVal = baseArr ? baseArr[i] : stats[i];
-      const valStr = isOc ? `${rawVal}→${stats[i]}` : `${stats[i]}`;
-      pop.add(scene.add.text(panelX + bW*0.12, ry, valStr, {
-        fontSize: this._fs(isOc ? 11 : 15),
+      const valStr = isOc ? `${rawVal} → ${stats[i]}` : `${stats[i]}`;
+      pop.add(scene.add.text(sbX + sbW * 0.60, midY, valStr, {
+        fontSize: this._fs(15),
         fill: isOc ? ocColor : statCol,
-        fontFamily: FontManager.MONO, fontStyle: isOc ? 'normal' : 'bold',
+        fontFamily: FontManager.MONO, fontStyle: 'bold',
       }).setOrigin(0.5, 0.5));
 
-      // 새로운 탭 증감 화살표 (오버클럭 행 포함)
+      // 증감 화살표
       if (!isPrev) {
-        const diff = stats[i] - prevStats[i];
-        if (diff !== 0) {
-          pop.add(scene.add.text(panelX + bW*0.44, ry,
-            `${diff > 0 ? '▲' : '▼'}${Math.abs(diff)}`, {
+        const prevBaseVal = prevBase ? prevBase[i] : prevStats[i];
+        const nextBaseVal = nextBase ? nextBase[i] : stats[i];
+        const baseDiff = nextBaseVal - prevBaseVal;
+        if (baseDiff !== 0) {
+          pop.add(scene.add.text(sbX + sbW - 4, midY,
+            `${baseDiff > 0 ? '▲' : '▼'}${Math.abs(baseDiff)}`, {
             fontSize: this._fs(11),
-            fill: isOc
-              ? (diff > 0 ? ocColor : '#e05050')
-              : (diff > 0 ? '#50e050' : '#e05050'),
+            fill: baseDiff > 0 ? '#50e050' : '#e05050',
             fontFamily: FontManager.MONO,
           }).setOrigin(1, 0.5));
         }
@@ -198,7 +218,7 @@ Tab_Recruit.prototype._showChoicePopup = function (title, prevLabel, nextLabel, 
   const cy = H / 2;
 
   const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0.80)
-    .setOrigin(0).setDepth(80);
+    .setOrigin(0).setDepth(80).setInteractive();  // 뒷배경 클릭 차단
   const pop = scene.add.container(0, 0).setDepth(81);
 
   const isSprite = rawValues &&
@@ -328,15 +348,5 @@ Tab_Recruit.prototype._showChoicePopup = function (title, prevLabel, nextLabel, 
   onPanelClick(prevPanel, nextPanel, rawValues?.[0] ?? prevLabel);
   onPanelClick(nextPanel, prevPanel, rawValues?.[1] ?? nextLabel);
 
-  // ✕ 닫기
-  const xt = scene.add.text(cx + bW/2 + gap/2 + bW/2 - 8, cy - bH/2 - parseInt(this._fs(14)), '✕', {
-    fontSize: this._fs(12), fill: '#4a2a10', fontFamily: FontManager.MONO,
-  }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-  pop.add(xt);
-  xt.on('pointerover', () => xt.setStyle({ fill: '#c8bfb0' }));
-  xt.on('pointerout',  () => xt.setStyle({ fill: '#4a2a10' }));
-  xt.on('pointerdown', () => {
-    overlay.destroy(); pop.destroy();
-    onConfirm(rawValues?.[0] ?? prevLabel);
-  });
+  // X버튼 없음 — 반드시 선택해야 닫힘
 };

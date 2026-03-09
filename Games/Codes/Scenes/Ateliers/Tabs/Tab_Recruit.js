@@ -473,8 +473,11 @@ class Tab_Recruit {
       hit.on('pointerdown',  () => {
         this.result  = roll;
         this.rerolls = {
-          stat: RECRUIT_MAX_REROLL, sprite: RECRUIT_MAX_REROLL,
-          passive: RECRUIT_MAX_REROLL, skill: RECRUIT_MAX_REROLL,
+          stat:     RECRUIT_MAX_REROLL,
+          sprite:   RECRUIT_MAX_REROLL,
+          position: RECRUIT_MAX_REROLL,
+          passive:  RECRUIT_MAX_REROLL,
+          skill:    RECRUIT_MAX_REROLL,
         };
         this._buildCustom();
       });
@@ -517,7 +520,10 @@ class Tab_Recruit {
     }).setOrigin(0.5));
 
     this._container.add(scene.add.text(cx, cy - bh*0.33, `Cog  ${result.cog}`, {
-      fontSize: this._fs(15), fill: '#a05018', fontStyle: 'bold', fontFamily: FontManager.MONO,
+      fontSize: this._fs(15),
+      fill: (typeof CharacterManager !== 'undefined' && CharacterManager.getCogColor)
+        ? CharacterManager.getCogColor(result.cog).css : '#a05018',
+      fontStyle: 'bold', fontFamily: FontManager.MONO,
     }).setOrigin(0.5));
 
     this._container.add(scene.add.text(cx, cy - bh*0.23, `합계  ${result.statSum}`, {
@@ -530,13 +536,46 @@ class Tab_Recruit {
     this._container.add(sep);
 
     this._statTexts = [];
+    const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
+      ? CharacterManager.STAT_COLORS
+      : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
+    const SCO = ['hp','health','attack','agility','luck'];
+
+    // 스탯 블록 — 박스 배경 + 행 분할
+    const statBlockX = cx - bw * 0.44;
+    const statBlockW = bw * 0.88;
+    const statStartY = cy - bh * 0.16 + parseInt(this._fs(4));
+    const rowH       = bh * 0.105;
+    const statBH     = rowH * RECRUIT_STAT_LABELS.length;
+
+    const statBgG = scene.add.graphics();
+    statBgG.fillStyle(0x0e0b07, 1);
+    statBgG.lineStyle(1, 0x2a1a08, 0.7);
+    statBgG.strokeRect(statBlockX, statStartY, statBlockW, statBH);
+    statBgG.fillRect(statBlockX, statStartY, statBlockW, statBH);
+    this._container.add(statBgG);
+
     RECRUIT_STAT_LABELS.forEach((label, i) => {
-      const y = cy - bh*0.10 + i * (bh * 0.093);
-      const t = scene.add.text(cx, y, `${label}  ${result.stats[i]}`, {
-        fontSize: this._fs(11), fill: '#c8bfb0', fontFamily: FontManager.MONO,
-      }).setOrigin(0.5);
-      this._container.add(t);
-      this._statTexts.push(t);
+      const rowY  = statStartY + i * rowH;
+      const midY  = rowY + rowH * 0.5;
+      const col   = SC[SCO[i]] || '#c8bfb0';
+
+      if (i > 0) {
+        const sg = scene.add.graphics();
+        sg.lineStyle(1, 0x1e1206, 0.5);
+        sg.lineBetween(statBlockX + 4, rowY, statBlockX + statBlockW - 4, rowY);
+        this._container.add(sg);
+      }
+
+      const lbl = scene.add.text(statBlockX + 8, midY, label, {
+        fontSize: this._fs(13), fill: col + 'cc', fontFamily: FontManager.MONO,
+      }).setOrigin(0, 0.5);
+      const val = scene.add.text(statBlockX + statBlockW - 6, midY, `${result.stats[i]}`, {
+        fontSize: this._fs(15), fill: col, fontFamily: FontManager.MONO,
+      }).setOrigin(1, 0.5);
+
+      this._container.add([lbl, val]);
+      this._statTexts.push(val);
     });
 
     this._buildNameField(cx, cy + bh*0.37, bw);
@@ -693,11 +732,22 @@ class Tab_Recruit {
   _rerollStats() {
     if (this.rerolls.stat <= 0) { this._toast('재설정 횟수 소진'); return; }
     const prev = [...this.result.stats];
-    const next = _rDist(this.result.statSum);
-    // _showStatPopup (Recruit_Popup.js) — 커스텀 화면 위에 전용 비교 팝업
+    // 같은 배열이 나오지 않도록 최대 5회 재시도
+    let next;
+    for (let t = 0; t < 5; t++) {
+      next = _rDist(this.result.statSum);
+      if (next.join(',') !== prev.join(',')) break;
+    }
+    const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
+      ? CharacterManager.STAT_COLORS
+      : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
+    const SCO = ['hp','health','attack','agility','luck'];
     this._showStatPopup(prev, next, (chosen) => {
       this.result.stats = chosen; this.rerolls.stat--;
-      chosen.forEach((v,i) => this._statTexts[i].setText(`${RECRUIT_STAT_LABELS[i]}  ${v}`));
+      chosen.forEach((v, i) => {
+        this._statTexts[i].setText(`${v}`);
+        this._statTexts[i].setStyle({ fill: SC[SCO[i]] || '#c8bfb0' });
+      });
       if (this.rerolls.stat <= 0) this._disableBtn(this._statBtn, '스탯 재설정  ✕');
       else this._statBtn.txt.setText(`스탯 재설정  🎲  ${this.rerolls.stat}`);
     });
@@ -706,7 +756,11 @@ class Tab_Recruit {
   _rerollSprite() {
     if (this.rerolls.sprite <= 0) { this._toast('재설정 횟수 소진'); return; }
     const prev = this.result.spriteKey;
-    const next = _rSpriteKey();
+    let next;
+    for (let t = 0; t < 10; t++) {
+      next = _rSpriteKey();
+      if (next !== prev) break;
+    }
     this._showChoicePopup('외형  재설정',
       `외형  #${parseInt(prev.replace('char_',''))+1}`,
       `외형  #${parseInt(next.replace('char_',''))+1}`,
@@ -720,8 +774,15 @@ class Tab_Recruit {
 
   _rerollPassive() {
     if (this.rerolls.passive <= 0) { this._toast('재설정 횟수 소진'); return; }
-    const prev = this.result.passive;
-    const next = _rFrom(RECRUIT_PASSIVE_POOL[this.result.cog]);
+    const prev    = this.result.passive;
+    const pool    = (typeof PASSIVE_POOL !== 'undefined')
+      ? (PASSIVE_POOL[this.result.cog] || PASSIVE_POOL[1])
+      : (RECRUIT_PASSIVE_POOL ? (RECRUIT_PASSIVE_POOL[this.result.cog] || []) : [prev]);
+    let next = prev;
+    for (let t = 0; t < 10; t++) {
+      next = _rFrom(pool);
+      if (next !== prev || pool.length <= 1) break;
+    }
     this._showChoicePopup('패시브  재설정', prev, next,
       (chosen) => {
         this.result.passive = chosen; this.rerolls.passive--;
@@ -734,7 +795,12 @@ class Tab_Recruit {
   _rerollSkill() {
     if (this.rerolls.skill <= 0) { this._toast('재설정 횟수 소진'); return; }
     const prev = this.result.skill;
-    const next = _rFrom(RECRUIT_SKILL_POOL[this.result.cog]);
+    const pool = RECRUIT_SKILL_POOL[this.result.cog] || RECRUIT_SKILL_POOL[1];
+    let next = prev;
+    for (let t = 0; t < 10; t++) {
+      next = _rFrom(pool);
+      if (next !== prev || pool.length <= 1) break;
+    }
     this._showChoicePopup('스킬  재설정', prev, next,
       (chosen) => {
         this.result.skill = chosen; this.rerolls.skill--;
@@ -810,7 +876,7 @@ class Tab_Recruit {
   // ════════════════════════════════════════════════════════════════
 
   _confirmHire() {
-    const { result } = this;
+    const { result, scene, W, H } = this;
     const statObj = {};
     RECRUIT_STAT_KEYS.forEach((k, i) => { statObj[k] = result.stats[i]; });
 
@@ -830,8 +896,12 @@ class Tab_Recruit {
       spriteKey: result.spriteKey,
     });
 
-    // 영입 완료 표시는 Recruit_Custom._showHireCompletePopup이 담당
-    this._delay(900, () => this._unlockTabs());
+    this._unlockTabs();
+    this._showHireCompletePopup(result.name, () => {
+      this._clear();
+      this._container.setVisible(true);
+      this._buildReady();
+    });
   }
 
   // ════════════════════════════════════════════════════════════════
@@ -840,16 +910,89 @@ class Tab_Recruit {
 
   _toast(msg) {
     const { scene, W, H } = this;
-    const tx = scene.add.text(W/2, H*0.88, msg, {
-      fontSize: this._fs(12), fill: '#c8a070',
-      fontFamily: FontManager.MONO,
-      backgroundColor: '#1e1008',
-      padding: { x: 12, y: 5 },
-    }).setOrigin(0.5).setDepth(65); // lockOverlay(50)·statPopup(60/61) 모두 위
+    const cx    = W / 2;
+    const cy    = H / 2;
+    const depth = 300;
+    const bW    = parseInt(scaledFontSize(220, scene.scale));
+    const bH    = parseInt(scaledFontSize(54,  scene.scale));
+
+    const box = scene.add.graphics().setDepth(depth).setAlpha(0);
+    box.fillStyle(0x0d0a06, 0.94);
+    box.fillRoundedRect(cx - bW/2, cy - bH/2, bW, bH, 8);
+    box.lineStyle(2, 0x8a3010, 0.9);
+    box.strokeRoundedRect(cx - bW/2, cy - bH/2, bW, bH, 8);
+    box.lineStyle(1, 0x3a1008, 0.5);
+    box.strokeRoundedRect(cx - bW/2 + 4, cy - bH/2 + 4, bW - 8, bH - 8, 5);
+
+    const txt = scene.add.text(cx, cy, msg, {
+      fontSize: scaledFontSize(15, scene.scale),
+      fill: '#e06030', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5).setDepth(depth + 1).setAlpha(0);
+
     scene.tweens.add({
-      targets: tx, alpha: 0, y: tx.y - 20,
-      duration: 700, delay: 800,
-      onComplete: () => tx.destroy(),
+      targets: [box, txt], alpha: 1, duration: 180, ease: 'Sine.easeOut',
+      onComplete: () => {
+        scene.time.delayedCall(1100, () => {
+          scene.tweens.add({
+            targets: [box, txt], alpha: 0, duration: 300, ease: 'Sine.easeIn',
+            onComplete: () => { box.destroy(); txt.destroy(); },
+          });
+        });
+      },
+    });
+  }
+
+  _showHireCompletePopup(name, onDone) {
+    const { scene, W, H } = this;
+    const cx    = W / 2;
+    const cy    = H / 2;
+    const depth = 200;
+
+    const overlay = scene.add.rectangle(0, 0, W, H, 0x000000, 0)
+      .setOrigin(0).setDepth(depth);
+
+    const bW    = parseInt(scaledFontSize(280, scene.scale));
+    const bH    = parseInt(scaledFontSize(90,  scene.scale));
+    const boxCy = cy + parseInt(scaledFontSize(4, scene.scale));
+
+    const msgBox = scene.add.graphics().setDepth(depth + 0.5).setAlpha(0);
+    msgBox.fillStyle(0x0d0a06, 0.92);
+    msgBox.fillRoundedRect(cx - bW/2, boxCy - bH/2, bW, bH, 10);
+    msgBox.lineStyle(2, 0x9a6020, 0.85);
+    msgBox.strokeRoundedRect(cx - bW/2, boxCy - bH/2, bW, bH, 10);
+    msgBox.lineStyle(1, 0x3a2010, 0.4);
+    msgBox.strokeRoundedRect(cx - bW/2 + 4, boxCy - bH/2 + 4, bW - 8, bH - 8, 7);
+
+    const mainTxt = scene.add.text(cx, boxCy - parseInt(scaledFontSize(12, scene.scale)),
+      `${name}  영입 완료`, {
+      fontSize: scaledFontSize(26, scene.scale),
+      fill: '#e8c070', fontFamily: FontManager.TITLE,
+      stroke: '#0a0604', strokeThickness: 5,
+    }).setOrigin(0.5).setAlpha(0).setDepth(depth + 1);
+
+    const subTxt = scene.add.text(cx, boxCy + parseInt(scaledFontSize(16, scene.scale)),
+      '새로운 동료가 합류했습니다', {
+      fontSize: scaledFontSize(12, scene.scale),
+      fill: '#8a6030', fontFamily: FontManager.MONO,
+    }).setOrigin(0.5).setAlpha(0).setDepth(depth + 1);
+
+    scene.tweens.add({ targets: overlay, alpha: 0.55, duration: 200, ease: 'Sine.easeOut' });
+    scene.tweens.add({
+      targets: [msgBox, mainTxt, subTxt], alpha: 1,
+      duration: 220, ease: 'Sine.easeOut',
+      onComplete: () => {
+        scene.time.delayedCall(1400, () => {
+          scene.tweens.add({
+            targets: [overlay, msgBox, mainTxt, subTxt],
+            alpha: 0, duration: 380, ease: 'Sine.easeIn',
+            onComplete: () => {
+              overlay.destroy(); msgBox.destroy();
+              mainTxt.destroy(); subTxt.destroy();
+              if (onDone) onDone();
+            },
+          });
+        });
+      },
     });
   }
 }

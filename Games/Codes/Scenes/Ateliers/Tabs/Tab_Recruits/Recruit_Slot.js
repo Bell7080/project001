@@ -268,14 +268,31 @@ Tab_Recruit.prototype._flipToPick = function () {
           fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
         }).setOrigin(0.5));
 
-        // 오버클럭 뱃지 (있을 때만, 번개 없이)
+        // 오버클럭 뱃지 (있을 때만, pulse glow)
         if (roll.overclock) {
-          const ocLabel = (roll.overclock.label || '').replace('⚡ ', '');
-          card.add(scene.add.text(0, infoTop + lineH * 3.6, ocLabel, {
+          const ocColor  = roll.overclock.color;
+          const rawLabel = (roll.overclock.label || '');
+          const ocName   = rawLabel
+            .replace(/⚡\s*/g, '').replace(/오버클럭\s*:\s*/g, '').trim()
+            || roll.overclock.statKey || '';
+          const ocTxt = scene.add.text(0, infoTop + lineH * 3.6,
+            `오버클럭 : ${ocName}`, {
             fontSize: this._fs(12),
-            fill: roll.overclock.color,
+            fill: ocColor,
             fontFamily: FontManager.MONO,
-          }).setOrigin(0.5));
+          }).setOrigin(0.5);
+          card.add(ocTxt);
+          // pulse glow
+          const _ocP = { v: 0 };
+          scene.tweens.add({
+            targets: _ocP, v: { from: 0, to: 1 },
+            duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+            onUpdate: () => {
+              if (ocTxt.active) ocTxt.setStyle({
+                fill: ocColor, stroke: ocColor, strokeThickness: _ocP.v * 1.4,
+              });
+            },
+          });
         }
 
         // 히트 영역

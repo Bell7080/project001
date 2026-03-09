@@ -98,6 +98,21 @@ Tab_Recruit.prototype._buildNameField = function (lx, rx, rw, y, fontSize) {
 Tab_Recruit.prototype._buildCustom = function () {
   this._clear();
 
+  // ── 오버클럭 baseStats 초기화 (최초 진입 시 한 번만) ─────────
+  if (this.result.overclock && !this.result.baseStats) {
+    // stats는 이미 _applyOverclock 적용된 값이므로 역산
+    const oc  = this.result.overclock;
+    const idx = oc.statIdx;
+    const bonus = oc.bonus || 0;
+    const base = [...this.result.stats];
+    if (idx >= 0 && idx < base.length) base[idx] = Math.max(0, base[idx] - bonus);
+    this.result.baseStats = base;
+    this.result.baseSum   = base.reduce((a,b)=>a+b, 0);
+  }
+  if (!this.result.baseSum) {
+    this.result.baseSum = this.result.statSum ?? this.result.stats.reduce((a,b)=>a+b,0);
+  }
+
   const { W, H } = this;
   const bW    = W * 0.21;
   const bH    = H * 0.80;    // 화면 기준 고정 높이로 넘침 방지
@@ -159,60 +174,145 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
   const infoW = infoR - infoX;
   let   infoY = topY;
 
-  // ── 이름 (크게, 편집 가능, 직접 구현) ───────────────────────
+  // ── 이름 편집 (Phaser keyboard + IME 오버레이, 한글만 허용) ──
   const nameFontSz = this._fs(20);
   const nameFieldH = parseInt(nameFontSz) + 10;
-  const _nameTxt2 = scene.add.text(infoX, infoY + nameFieldH/2, this.result.name, {
+  const nameTextCY = infoY + nameFieldH / 2;
+  // 밑줄 Y는 텍스트 중앙 + 폰트 절반 아래
+  const nameUnderY = infoY + nameFieldH;
+
+  const _nameTxt2 = scene.add.text(infoX, nameTextCY, this.result.name, {
     fontSize: nameFontSz, fill: '#e8c070', fontFamily: FontManager.TITLE,
   }).setOrigin(0, 0.5);
   this._container.add(_nameTxt2);
   this._nameTxt = _nameTxt2;
 
+  // 커서 깜빡임 바
+  const _cursorBar = scene.add.graphics().setVisible(false);
+  _cursorBar.fillStyle(0xe8c070, 1);
+  _cursorBar.fillRect(0, nameTextCY - parseInt(nameFontSz)*0.5, 2, parseInt(nameFontSz));
+  this._container.add(_cursorBar);
+  let _cursorTween = null;
+  let _isEditing   = false;
+
   const _nameLineG = scene.add.graphics();
-  const _drawNL = (hov) => {
+  const _drawNL = (hov, editing) => {
     _nameLineG.clear();
-    _nameLineG.lineStyle(1, hov ? 0x9a6020 : 0x3a2010, hov ? 1.0 : 0.5);
-    _nameLineG.lineBetween(infoX, infoY + nameFieldH, infoX + infoW, infoY + nameFieldH);
+    const col = editing ? 0xf0d080 : (hov ? 0x9a6020 : 0x3a2010);
+    const alp = editing ? 1.0 : (hov ? 1.0 : 0.5);
+    _nameLineG.lineStyle(editing ? 2 : 1, col, alp);
+    _nameLineG.lineBetween(infoX, nameUnderY, infoX + infoW, nameUnderY);
   };
-  _drawNL(false);
+  _drawNL(false, false);
   this._container.add(_nameLineG);
 
-  const _nameHintTxt = scene.add.text(infoX + infoW + 2, infoY + nameFieldH/2, '✎', {
+  const _nameHintTxt = scene.add.text(infoX + infoW + 2, nameTextCY, '✎', {
     fontSize: this._fs(9), fill: '#5a3010', fontFamily: FontManager.MONO,
   }).setOrigin(0, 0.5).setAlpha(0);
   this._container.add(_nameHintTxt);
 
+  // 한글 유효성: 완성된 한글 한 글자 이상 (초성/숫자/영어 불가)
+  const _isValidKorean = (str) => {
+    if (!str || str.length === 0) return false;
+    // 완성형 한글 범위: AC00-D7A3
+    return /^[\uAC00-\uD7A3]+$/.test(str);
+  };
+
   const _nameHit = scene.add.rectangle(
-    infoX + infoW/2, infoY + nameFieldH/2, infoW, nameFieldH, 0, 0
+    infoX + infoW/2, nameTextCY, infoW, nameFieldH, 0, 0
   ).setInteractive({ useHandCursor: true });
   this._container.add(_nameHit);
-  _nameHit.on('pointerover', () => { _drawNL(true);  _nameHintTxt.setAlpha(0.8); });
-  _nameHit.on('pointerout',  () => { _drawNL(false); _nameHintTxt.setAlpha(0); });
+  _nameHit.on('pointerover', () => { if (!_isEditing) _drawNL(true, false); _nameHintTxt.setAlpha(0.8); });
+  _nameHit.on('pointerout',  () => { if (!_isEditing) _drawNL(false, false); _nameHintTxt.setAlpha(0); });
+
   _nameHit.on('pointerdown', () => {
+    if (_isEditing) return;
+    _isEditing = true;
+    _drawNL(false, true);
+
     const canvas = scene.game.canvas;
     const rect   = canvas.getBoundingClientRect();
     const sX = canvas.offsetWidth  / scene.game.config.width;
     const sY = canvas.offsetHeight / scene.game.config.height;
+
+    // 텍스트 숨기고 투명 IME 인풋 오버레이
+    _nameTxt2.setVisible(false);
+
     const inp = document.createElement('input');
-    inp.type = 'text'; inp.value = this.result.name; inp.maxLength = 10;
+    inp.type = 'text'; inp.value = this.result.name; inp.maxLength = 5;
+    // 입력 중 실시간 미리보기 (Phaser 텍스트로)
+    const _previewTxt = scene.add.text(infoX, nameTextCY, '', {
+      fontSize: nameFontSz, fill: '#e8c070aa', fontFamily: FontManager.TITLE,
+    }).setOrigin(0, 0.5);
+    this._container.add(_previewTxt);
+
     Object.assign(inp.style, {
-      position: 'fixed',
-      left:   `${infoX * sX + rect.left}px`,
-      top:    `${infoY * sY + rect.top}px`,
-      width:  `${infoW * sX}px`,
-      height: `${nameFieldH * sY}px`,
-      background: '#1a1008', color: '#e8c070',
-      border: 'none', borderBottom: '1px solid #8a5020', outline: 'none',
-      fontSize: `${parseInt(nameFontSz) * sY * 0.85}px`,
-      fontFamily: 'serif', textAlign: 'left', padding: '0 4px', zIndex: '9999',
+      position:    'fixed',
+      left:        `${infoX * sX + rect.left}px`,
+      top:         `${(nameTextCY - parseInt(nameFontSz)*0.5) * sY + rect.top}px`,
+      width:       `${infoW * sX}px`,
+      height:      `${nameFieldH * sY}px`,
+      background:  'transparent',
+      color:       'transparent',
+      caretColor:  'transparent',
+      border:      'none',
+      outline:     'none',
+      fontSize:    `${parseInt(nameFontSz) * sY * 0.88}px`,
+      fontFamily:  'serif',
+      padding:     '0',
+      margin:      '0',
+      zIndex:      '9999',
+      opacity:     '0.01',   // 완전 투명하면 IME 안 열릴 수 있으므로 0.01
     });
     document.body.appendChild(inp);
-    inp.focus(); inp.select();
-    const finish = () => {
-      const n = inp.value.trim() || this.result.name;
-      this.result.name = n; _nameTxt2.setText(n); inp.remove();
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+
+    // 커서 위치 갱신 함수
+    const _updateCursor = () => {
+      const txt = _previewTxt.active ? _previewTxt : _nameTxt2;
+      const tw  = txt.width;
+      if (_cursorBar.active) {
+        _cursorBar.setX(infoX + tw + 2);
+        _cursorBar.setVisible(true);
+      }
     };
-    inp.addEventListener('blur', finish);
+
+    // 커서 깜빡임 트윈
+    _cursorBar.setX(infoX + scene.add.text(0, 0, inp.value, {
+      fontSize: nameFontSz, fontFamily: FontManager.TITLE,
+    }).setAlpha(0).width + 2);
+    _cursorBar.setVisible(true);
+    _cursorTween = scene.tweens.add({
+      targets: _cursorBar, alpha: { from:1, to:0 },
+      duration: 500, yoyo: true, repeat: -1, ease: 'Stepped',
+    });
+
+    // 실시간 미리보기
+    inp.addEventListener('input', () => {
+      _previewTxt.setText(inp.value);
+      _updateCursor();
+    });
+
+    const finish = () => {
+      if (!_isEditing) return;
+      _isEditing = false;
+
+      if (_cursorTween) { _cursorTween.stop(); _cursorTween.remove(); }
+      _cursorBar.setVisible(false);
+      _previewTxt.destroy();
+      inp.remove();
+
+      const raw = inp.value.trim();
+      if (_isValidKorean(raw)) {
+        this.result.name = raw;
+      }
+      // 유효하지 않으면 기존 이름 유지
+      _nameTxt2.setText(this.result.name);
+      _nameTxt2.setVisible(true);
+      _drawNL(false, false);
+    };
+    inp.addEventListener('blur',    finish);
     inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); });
   });
   infoY += nameFieldH + parseInt(this._fs(8));
@@ -333,9 +433,20 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
     }
 
     if (isOc) {
-      const glowG2 = scene.add.graphics();
-      glowG2.fillStyle(ocHex3, 0.18);
-      glowG2.fillRect(statBlockX + 1, rowY + 1, statBlockW - 2, rowH2 - 2);
+      const glowG2  = scene.add.graphics();
+      const slices  = 24;
+      const barX    = statBlockX + 1;
+      const barY    = rowY + 1;
+      const barW    = statBlockW - 2;
+      const barH    = rowH2 - 2;
+      const sliceW  = barW / slices;
+      for (let s = 0; s < slices; s++) {
+        // 좌 0.28 → 우 0.02 선형 감소
+        const alpha = 0.28 - (0.26 * s / (slices - 1));
+        glowG2.fillStyle(ocHex3, alpha);
+        glowG2.fillRect(barX + s * sliceW, barY, Math.ceil(sliceW), barH);
+      }
+      // 좌측 강조선 진하게 유지
       glowG2.fillStyle(ocHex3, 0.85);
       glowG2.fillRect(statBlockX + 1, rowY + 1, 2, rowH2 - 2);
       this._container.add(glowG2);
@@ -348,9 +459,9 @@ Tab_Recruit.prototype._buildResultBox = function (cx, cy, bw, bh) {
     }).setOrigin(0, 0.5);
 
     const base   = (isOc && result.baseStats) ? result.baseStats[i] : result.stats[i];
-    const valStr = isOc ? `${base}  →  ${result.stats[i]}` : `${result.stats[i]}`;
+    const valStr = isOc ? `${base} → ${result.stats[i]}` : `${result.stats[i]}`;
     const valT   = scene.add.text(statBlockX + statBlockW - 6, midY, valStr, {
-      fontSize: this._fs(isOc ? 9 : 11),
+      fontSize: this._fs(11),
       fill: isOc ? ocColor : statCol,
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
@@ -466,7 +577,7 @@ Tab_Recruit.prototype._buildCustomBox = function (cx, cy, bw, bh) {
   const posRef = {}; const posBtn = {};
   const posDesc = (typeof getPositionDescription === 'function')
     ? getPositionDescription(result.position) : '';
-  makeAbilBox('POSITION', posRef, result.position, posDesc, this.rerolls.passive,
+  makeAbilBox('POSITION', posRef, result.position, posDesc, this.rerolls.position,
     () => this._rerollPosition(), posBtn);
   this._positionTxtRef = posRef;
   this._positionBtn    = posBtn.ref;
@@ -700,17 +811,21 @@ Tab_Recruit.prototype._rerollSprite = function () {
 };
 
 Tab_Recruit.prototype._rerollPosition = function () {
-  if (this.rerolls.passive <= 0) { this._toast('재설정 횟수 소진'); return; }
+  if (this.rerolls.position <= 0) { this._toast('재설정 횟수 소진'); return; }
   const prev    = this.result.position;
   const posPool = (typeof POSITION_POOL !== 'undefined')
     ? (POSITION_POOL[this.result.cog] || POSITION_POOL[1])
     : ['앞칸 타격'];
-  const next = _rFrom(posPool);
+  let next = prev;
+  for (let t = 0; t < 10; t++) {
+    next = _rFrom(posPool);
+    if (next !== prev || posPool.length <= 1) break;
+  }
   this._showChoicePopup('포지션  재설정', prev, next, (chosen) => {
-    this.result.position = chosen; this.rerolls.passive--;
+    this.result.position = chosen; this.rerolls.position--;
     this._positionTxtRef.ref.setText(chosen);
-    if (this.rerolls.passive <= 0) this._disableBtn(this._positionBtn, '✕');
-    else this._positionBtn.txt.setText(`🎲  ${this.rerolls.passive}`);
+    if (this.rerolls.position <= 0) this._disableBtn(this._positionBtn, '✕');
+    else this._positionBtn.txt.setText(`🎲  ${this.rerolls.position}`);
   }, [prev, next]);
 };
 
@@ -720,7 +835,11 @@ Tab_Recruit.prototype._rerollPassive = function () {
   const pasPool = (typeof PASSIVE_POOL !== 'undefined')
     ? (PASSIVE_POOL[this.result.cog] || PASSIVE_POOL[1])
     : ['강인한 체질'];
-  const next = _rFrom(pasPool);
+  let next = prev;
+  for (let t = 0; t < 10; t++) {
+    next = _rFrom(pasPool);
+    if (next !== prev || pasPool.length <= 1) break;
+  }
   this._showChoicePopup('패시브  재설정', prev, next, (chosen) => {
     this.result.passive = chosen; this.rerolls.passive--;
     this._passiveTxtRef.ref.setText(chosen);
@@ -733,7 +852,11 @@ Tab_Recruit.prototype._rerollSkill = function () {
   if (this.rerolls.skill <= 0) { this._toast('재설정 횟수 소진'); return; }
   const prev    = this.result.skill;
   const sklPool = RECRUIT_SKILL_POOL[this.result.cog] || RECRUIT_SKILL_POOL[1];
-  const next    = _rFrom(sklPool);
+  let next = prev;
+  for (let t = 0; t < 10; t++) {
+    next = _rFrom(sklPool);
+    if (next !== prev || sklPool.length <= 1) break;
+  }
   this._showChoicePopup('스킬  재설정', prev, next, (chosen) => {
     this.result.skill = chosen; this.rerolls.skill--;
     this._skillTxtRef.ref.setText(chosen);
@@ -803,14 +926,16 @@ Tab_Recruit.prototype._showHireCompletePopup = function (name, onDone) {
     fill: '#8a6030', fontFamily: FontManager.MONO,
   }).setOrigin(0.5).setAlpha(0).setDepth(depth + 1);
 
-  const boxW  = parseInt(scaledFontSize(200, scene.scale));
-  const boxH  = parseInt(scaledFontSize(60, scene.scale));
+  const boxW  = parseInt(scaledFontSize(280, scene.scale));
+  const boxH  = parseInt(scaledFontSize(90,  scene.scale));
   const boxCy = cy + parseInt(scaledFontSize(4, scene.scale));
   const msgBox = scene.add.graphics().setDepth(depth + 0.5).setAlpha(0);
-  msgBox.fillStyle(0x000000, 0.55);
-  msgBox.fillRoundedRect(cx - boxW / 2, boxCy - boxH / 2, boxW, boxH, 12);
-  msgBox.lineStyle(1, 0x6b4a18, 0.4);
-  msgBox.strokeRoundedRect(cx - boxW / 2, boxCy - boxH / 2, boxW, boxH, 12);
+  msgBox.fillStyle(0x0d0a06, 0.92);
+  msgBox.fillRoundedRect(cx - boxW / 2, boxCy - boxH / 2, boxW, boxH, 10);
+  msgBox.lineStyle(2, 0x9a6020, 0.85);
+  msgBox.strokeRoundedRect(cx - boxW / 2, boxCy - boxH / 2, boxW, boxH, 10);
+  msgBox.lineStyle(1, 0x3a2010, 0.4);
+  msgBox.strokeRoundedRect(cx - boxW / 2 + 4, boxCy - boxH / 2 + 4, boxW - 8, boxH - 8, 7);
 
   scene.tweens.add({ targets: overlay, alpha: 0.55, duration: 200, ease: 'Sine.easeOut' });
   scene.tweens.add({

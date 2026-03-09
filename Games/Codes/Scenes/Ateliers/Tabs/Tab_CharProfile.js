@@ -31,7 +31,7 @@ const CharProfile = {
     const { onClose, onHeal, extraBtns = [] } = opts;
 
     const pw = W * 0.42;
-    const ph = H * 0.74;
+    const ph = H * 0.68;  // ✏️ 74% → 68% (하단 여백 축소)
     const px = (W - pw) / 2;
     const py = (H - ph) / 2;
     const fs = n => scaledFontSize(n, scene.scale);
@@ -105,6 +105,9 @@ const CharProfile = {
         fontSize:fs(16), fill:'#2a3a44', fontFamily:FontManager.MONO,
       }).setOrigin(0.5));
     }
+
+    // 정리가 필요한 repeat:-1 tween 참조 목록
+    const _persistTweens = [];
 
     // ════════════════════════════════════════════════════════════
     //  툴팁 헬퍼
@@ -215,14 +218,15 @@ const CharProfile = {
       // 텍스트 자체 발광 — shadow 트윈으로 처리
       const _ocPulse = { v: 0 };
       const _applyGlow = (v) => {
-        const t = Math.round(v * 255).toString(16).padStart(2, '0');
+        if (!ocLine.active) return;
         ocLine.setStyle({ fill: ocColor, stroke: ocColor, strokeThickness: v * 1.5 });
       };
-      scene.tweens.add({
+      const _ocTw = scene.tweens.add({
         targets: _ocPulse, v: { from: 0, to: 1 },
         duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
         onUpdate: () => _applyGlow(_ocPulse.v),
       });
+      _persistTweens.push(_ocTw);
 
       infoY += parseInt(fs(18));
     }
@@ -262,7 +266,10 @@ const CharProfile = {
     cogBg.fillRect(bodyX,curY,bodyW,cogBarH);
     g.add(cogBg);
     g.add(scene.add.text(bodyX+bodyW/2, curY+cogBarH/2, `◈  Cog  ${char.cog}  ◈`, {
-      fontSize:fs(13), fill:'#e8c040', fontFamily:FontManager.MONO,
+      fontSize:fs(13),
+      fill: (typeof CharacterManager !== 'undefined' && CharacterManager.getCogColor)
+        ? CharacterManager.getCogColor(char.cog).css : '#e8c040',
+      fontFamily:FontManager.MONO,
     }).setOrigin(0.5));
     curY += cogBarH + parseInt(fs(6));  // ✏️ cogBarH 기준으로 통일
 
@@ -354,10 +361,22 @@ const CharProfile = {
 
       if (isOc) {
         const glowBar = scene.add.graphics();
-        glowBar.fillStyle(ocHex, 0.22);
-        glowBar.fillRect(leftColX+1, sy+1, colW-2, rowH-2);
+        // 좌→우 알파 페이드: 여러 슬라이스로 그라디언트 시뮬레이션
+        const slices  = 24;
+        const barX    = leftColX + 1;
+        const barY    = sy + 1;
+        const barW    = colW - 2;
+        const barH    = rowH - 2;
+        const sliceW  = barW / slices;
+        for (let s = 0; s < slices; s++) {
+          // 왼쪽 0.28 → 오른쪽 0.02 로 선형 감소
+          const alpha = 0.28 - (0.26 * s / (slices - 1));
+          glowBar.fillStyle(ocHex, alpha);
+          glowBar.fillRect(barX + s * sliceW, barY, Math.ceil(sliceW), barH);
+        }
+        // 좌측 강조선은 진하게 유지
         glowBar.fillStyle(ocHex, 0.85);
-        glowBar.fillRect(leftColX+1, sy+1, 2, rowH-2);
+        glowBar.fillRect(leftColX + 1, sy + 1, 2, rowH - 2);
         g.add(glowBar);
       }
 
@@ -577,6 +596,9 @@ const CharProfile = {
 
     function _close() {
       _hideTip();
+      // repeat:-1 트윈 먼저 중단 (destroy 후 onUpdate 참조 오류 방지)
+      _persistTweens.forEach(tw => { try { tw.stop(); tw.remove(); } catch(e){} });
+      scene.tweens.killTweensOf(g);
       overlay.destroy();
       g.destroy();
       if (onClose) onClose();
