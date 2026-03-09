@@ -731,14 +731,18 @@ class Tab_Recruit {
 
   _rerollStats() {
     if (this.rerolls.stat <= 0) { this._toast('재설정 횟수 소진'); return; }
-    const prev = [...this.result.stats];
-    // 같은 배열이 나오지 않도록 최대 5회 재시도
+    const prev    = [...this.result.stats];
+    const baseSum = this.result.statSum ?? prev.reduce((a,b)=>a+b,0);
+    const MIN_SUM = 7; // 최솟값 합계 — 이 경우엔 변동 불가이므로 예외
+
     let next;
-    for (let t = 0; t < 5; t++) {
-      next = _rDist(this.result.statSum);
-      if (next.join(',') !== prev.join(',')) break;
+    for (let t = 0; t < 20; t++) {
+      next = _rDist(baseSum);
+      // 총 변동량이 0이면 재시도 (단, 최솟값 상태면 루프 탈출)
+      const totalDiff = next.reduce((acc, v, i) => acc + Math.abs(v - prev[i]), 0);
+      if (totalDiff > 0 || baseSum <= MIN_SUM) break;
     }
-    const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
+    const SC  = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
       ? CharacterManager.STAT_COLORS
       : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
     const SCO = ['hp','health','attack','agility','luck'];
@@ -897,9 +901,9 @@ class Tab_Recruit {
     });
 
     this._unlockTabs();
+    this._clear();  // 커스텀 UI 즉시 제거
+
     this._showHireCompletePopup(result.name, () => {
-      this._clear();
-      this._container.setVisible(true);
       this._buildReady();
     });
   }

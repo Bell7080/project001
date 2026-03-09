@@ -752,20 +752,27 @@ Tab_Recruit.prototype._rerollStats = function () {
 
   const oc      = this.result.overclock;
   const baseSum = this.result.baseSum ?? this.result.statSum;
+  const MIN_SUM = 7;
 
-  // 오버클럭 적용 전 완전 랜덤 분배
-  const newBase = this._rDistRandom(baseSum);
+  const prevBase = this.result.baseStats
+    ? [...this.result.baseStats]
+    : [...this.result.stats];
+
+  // 변동값이 0인 경우 재시도 (최대 20회, 최솟값 상태 예외)
+  let newBase;
+  for (let t = 0; t < 20; t++) {
+    newBase = this._rDistRandom(baseSum);
+    const totalDiff = newBase.reduce((acc, v, i) => acc + Math.abs(v - prevBase[i]), 0);
+    if (totalDiff > 0 || baseSum <= MIN_SUM) break;
+  }
 
   // 오버클럭 보정 재적용
   const next = (typeof _applyOverclock === 'function')
     ? _applyOverclock(newBase, oc)
     : [...newBase];
 
-  // baseStats 갱신 (오버클럭 있을 때 "기본→유효값" 표시용)
   const nextBase = [...newBase];
-
   const prev     = [...this.result.stats];
-  const prevBase = this.result.baseStats ? [...this.result.baseStats] : [...prev];
 
   this._showStatPopup(prev, next, (chosen) => {
     // 선택된 게 prev면 baseStats도 원래 것 유지
@@ -893,11 +900,9 @@ Tab_Recruit.prototype._confirmHire = function () {
   });
 
   this._unlockTabs();
+  this._clear();  // 커스텀 UI 즉시 제거 (컨테이너는 살려둠)
 
-  if (this._container) this._container.setVisible(false);
   this._showHireCompletePopup(result.name, () => {
-    this._clear();
-    this._container.setVisible(true);
     this._buildReady();
   });
 };

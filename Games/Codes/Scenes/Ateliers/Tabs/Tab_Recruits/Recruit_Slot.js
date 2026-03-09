@@ -304,10 +304,11 @@ Tab_Recruit.prototype._flipToPick = function () {
         hit.on('pointerdown', () => {
           this.result  = roll;
           this.rerolls = {
-            stat:    RECRUIT_MAX_REROLL,
-            sprite:  RECRUIT_MAX_REROLL,
-            passive: RECRUIT_MAX_REROLL,
-            skill:   RECRUIT_MAX_REROLL,
+            stat:     RECRUIT_MAX_REROLL,
+            sprite:   RECRUIT_MAX_REROLL,
+            position: RECRUIT_MAX_REROLL,
+            passive:  RECRUIT_MAX_REROLL,
+            skill:    RECRUIT_MAX_REROLL,
           };
           this._buildCustom();
         });
