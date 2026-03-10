@@ -109,38 +109,42 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _switchTab(key, instant = false) {
-    // 웰컴이 살아있거나 다른 탭이면 전환 허용
     if (!instant && key === this._activeTab && !this._welcomeObj) return;
+    // 전환 중 중복 클릭 방지
+    if (this._tabSwitching) return;
 
-    const W = this.W;
-    const H = this.H;
-
+    const W = this.W, H = this.H;
     const TabMap = {
-      explore: Tab_Explore, recruit: Tab_Recruit, manage: Tab_Manage, squad: Tab_Squad,
+      explore: Tab_Explore, recruit: Tab_Recruit, manage: Tab_Manage_Full, squad: Tab_Squad,
       facility: Tab_Facility, outsource: Tab_Outsource, dredge: Tab_Dredge,
       shop: Tab_Shop, storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
     };
 
-    const build = () => {
-      // ── 웰컴 팝업 페이드아웃 후 destroy ─────────────────────
-      if (this._welcomeObj) {
-        const wo = this._welcomeObj;
-        this._welcomeObj = null;
-        this.tweens.add({
-          targets: wo._container,
-          alpha: 0, duration: 200, ease: 'Sine.easeIn',
-          onComplete: () => wo.destroy(),
-        });
-      }
+    // ── 언더라인 즉시 전부 숨김 (잔상 방지) ──────────────────
+    if (this._sideButtonRefs) {
+      this._sideButtonRefs.forEach(({ underline, drawUnderline }) => {
+        if (underline)     underline.setAlpha(0);
+        if (drawUnderline) drawUnderline(false);
+      });
+    }
 
-      if (this._currentTabObj) {
-        this._currentTabObj.destroy();
-        this._currentTabObj = null;
+    const build = () => {
+      this._tabSwitching = false;
+
+      if (this._welcomeObj) {
+        const wo = this._welcomeObj; this._welcomeObj = null;
+        this.tweens.add({ targets: wo._container, alpha: 0, duration: 200, ease: 'Sine.easeIn', onComplete: () => wo.destroy() });
       }
+      if (this._currentTabObj) { this._currentTabObj.destroy(); this._currentTabObj = null; }
+
       this._activeTab = key;
       this._rebuildSideButtonColors();
+
       const Cls = TabMap[key];
-      if (Cls) {
+      if (!Cls) return;
+      if (key === 'manage') {
+        this._enterManageFull();
+      } else {
         this._currentTabObj = new Cls(this, W, H);
         this._currentTabObj.show();
       }
@@ -148,18 +152,16 @@ class AtelierScene extends Phaser.Scene {
 
     if (instant) { build(); return; }
 
+    this._tabSwitching = true;
     const prev = this._currentTabObj;
     if (prev && prev._container) {
       this.tweens.add({
-        targets: prev._container, alpha: 0, duration: 110, ease: 'Sine.easeIn',
+        targets: prev._container, alpha: 0, duration: 100, ease: 'Sine.easeIn',
         onComplete: () => {
           build();
-          if (this._currentTabObj && this._currentTabObj._container) {
+          if (key !== 'manage' && this._currentTabObj?._container) {
             this._currentTabObj._container.setAlpha(0);
-            this.tweens.add({
-              targets: this._currentTabObj._container,
-              alpha: 1, duration: 180, ease: 'Sine.easeOut',
-            });
+            this.tweens.add({ targets: this._currentTabObj._container, alpha: 1, duration: 160, ease: 'Sine.easeOut' });
           }
         },
       });
@@ -395,6 +397,148 @@ class AtelierScene extends Phaser.Scene {
     this.tweens.add({
       targets: flash, alpha: 1, duration: 300, ease: 'Sine.easeIn',
       onComplete: () => this.scene.start('LobbyScene'),
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  Tab_Manage_Full 진입 연출
+  //  ① 현재 탭 + 사이드버튼 슬라이드아웃
+  //  ② Background_002 페이드인
+  //  ③ 헤더↓, 좌측←, 우측→ 슬라이드인
+  //  ④ 중앙 일러스트 페이드인 (가장 늦게)
+  //  ⑤ 첫 번째 캐릭터 자동 선택
+  // ════════════════════════════════════════════════════════════
+  _enterManageFull() {
+    const W = this.W, H = this.H;
+    const dur     = 200;
+    const stagger = 30;
+
+    // ① 현재 탭 페이드아웃
+    if (this._currentTabObj && this._currentTabObj._container) {
+      this.tweens.add({
+        targets: this._currentTabObj._container,
+        alpha: 0, duration: 150, ease: 'Sine.easeIn',
+        onComplete: () => { if (this._currentTabObj) { this._currentTabObj.destroy(); this._currentTabObj = null; } },
+      });
+    }
+
+    // ① 사이드 버튼 슬라이드아웃
+    const leftBtns  = this._uiAnimTargets.filter(t => t.dir === 'left');
+    const rightBtns = this._uiAnimTargets.filter(t => t.dir === 'right');
+    const downBtns  = this._uiAnimTargets.filter(t => t.dir === 'down' || t.dir === 'up');
+
+    leftBtns.forEach((t, i) => {
+      if (!t.obj?.scene) return;
+      this.tweens.add({ targets:t.obj, x:t.originX - W*0.18, alpha:0, duration:dur, delay:i*stagger, ease:'Sine.easeIn' });
+    });
+    rightBtns.forEach((t, i) => {
+      if (!t.obj?.scene) return;
+      this.tweens.add({ targets:t.obj, x:t.originX + W*0.18, alpha:0, duration:dur, delay:i*stagger, ease:'Sine.easeIn' });
+    });
+    downBtns.forEach((t, i) => {
+      if (!t.obj?.scene) return;
+      this.tweens.add({ targets:t.obj, y:t.originY + H*0.12, alpha:0, duration:dur, delay:i*stagger, ease:'Sine.easeIn' });
+    });
+
+    const allBtns  = [...leftBtns, ...rightBtns, ...downBtns];
+    const slideEnd = dur + allBtns.length * stagger + 30;
+
+    // ② 버튼 사라진 직후 — Tab 생성 + 패널 슬라이드인
+    this.time.delayedCall(slideEnd, () => {
+      const tab = new Tab_Manage_Full(this, W, H, () => this._exitManageFull());
+      this._currentTabObj = tab;
+
+      // 전체 컨테이너는 보이되, 각 패널을 개별 애니메이션
+      tab._container.setAlpha(1).setVisible(true);
+
+      // 헤더: 위에서 아래로
+      if (tab._headerPanel) {
+        const oy = tab._headerPanel.y;
+        tab._headerPanel.setAlpha(0).setY(oy - 28);
+        this.tweens.add({ targets:tab._headerPanel, y:oy, alpha:1, duration:280, delay:0, ease:'Sine.easeOut' });
+      }
+      // 좌측: 왼쪽에서 슬라이드인
+      if (tab._listPanel) {
+        const ox = tab._listPanel.x;
+        tab._listPanel.setAlpha(0).setX(ox - W*0.16);
+        this.tweens.add({ targets:tab._listPanel, x:ox, alpha:1, duration:320, delay:30, ease:'Back.easeOut' });
+      }
+      // 우측: 오른쪽에서 슬라이드인
+      if (tab._rightPanel) {
+        const ox = tab._rightPanel.x;
+        tab._rightPanel.setAlpha(0).setX(ox + W*0.16);
+        this.tweens.add({ targets:tab._rightPanel, x:ox, alpha:1, duration:320, delay:60, ease:'Back.easeOut' });
+      }
+      // 돌아가기 버튼: 아래에서 올라오기
+      if (tab._backBtn) {
+        const oy = tab._backBtn.y;
+        tab._backBtn.setAlpha(0).setY(oy + 32);
+        this.tweens.add({ targets:tab._backBtn, y:oy, alpha:1, duration:300, delay:80, ease:'Back.easeOut' });
+      }
+      // 중앙: 배경 이미지 포함 페이드인 (가장 늦게 — 사라락 느낌)
+      if (tab._centerPanel) {
+        tab._centerPanel.setAlpha(0);
+        this.tweens.add({ targets:tab._centerPanel, alpha:1, duration:450, delay:140, ease:'Sine.easeOut' });
+      }
+
+      // ⑤ 첫 번째 캐릭터 자동 선택 (패널 슬라이드인 완료 타이밍)
+      this.time.delayedCall(220, () => {
+        if (tab._cardObjs && tab._cardObjs.length > 0) {
+          tab._selectChar(tab._cardObjs[0].char);
+        }
+      });
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════
+  //  Tab_Manage_Full 퇴장 연출 (돌아가기)
+  //  ① 돌아가기 버튼 왼쪽 슬라이드아웃
+  //  ② 중앙 일러스트(배경 포함) 페이드아웃
+  //  ③ 헤더↑, 좌측←, 우측→ 슬라이드아웃
+  //  ④ 탭 destroy + 사이드버튼 슬라이드인 (역방향)
+  // ════════════════════════════════════════════════════════════
+  _exitManageFull() {
+    const W = this.W, H = this.H;
+    const tab = this._currentTabObj;
+    if (!tab) return;
+
+    // 중복 호출 방지
+    this._currentTabObj = null;
+
+    // ① 돌아가기 버튼 왼쪽으로
+    if (tab._backBtn) {
+      this.tweens.add({ targets:tab._backBtn, x:tab._backBtn.x - W*0.15, alpha:0, duration:200, ease:'Sine.easeIn' });
+    }
+    // ② 중앙 페이드아웃
+    if (tab._centerPanel) {
+      this.tweens.add({ targets:tab._centerPanel, alpha:0, duration:220, ease:'Sine.easeIn' });
+    }
+    // ③ 헤더 위로
+    if (tab._headerPanel) {
+      this.tweens.add({ targets:tab._headerPanel, y:tab._headerPanel.y - 28, alpha:0, duration:200, delay:0, ease:'Sine.easeIn' });
+    }
+    // ③ 좌측 왼쪽으로
+    if (tab._listPanel) {
+      this.tweens.add({ targets:tab._listPanel, x:tab._listPanel.x - W*0.16, alpha:0, duration:220, delay:20, ease:'Sine.easeIn' });
+    }
+    // ③ 우측 오른쪽으로
+    if (tab._rightPanel) {
+      this.tweens.add({ targets:tab._rightPanel, x:tab._rightPanel.x + W*0.16, alpha:0, duration:220, delay:40, ease:'Sine.easeIn' });
+    }
+
+    // ④ 모든 아웃 완료 후 destroy + 사이드버튼 슬라이드인
+    this.time.delayedCall(320, () => {
+      try { tab.destroy(); } catch(e){}
+      // 언더라인 전부 초기화 후 explore 활성화 (잔상 방지)
+      if (this._sideButtonRefs) {
+        this._sideButtonRefs.forEach(({ underline, drawUnderline }) => {
+          if (underline) underline.setAlpha(0);
+          if (drawUnderline) drawUnderline(false);
+        });
+      }
+      this._activeTab = 'explore';
+      this._rebuildSideButtonColors();
+      this._animateUIIn(false);
     });
   }
 
