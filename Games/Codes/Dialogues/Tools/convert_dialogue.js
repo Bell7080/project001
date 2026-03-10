@@ -26,6 +26,20 @@
 //  닉네임 런타임 변경 (필요 시):
 //    SaveManager.setFlag('cast_nick_AA', '노아') 로 런타임 오버라이드 가능
 //    → DialogueScene이 자동으로 반영
+//
+//  BG 탭 구조 (배경 태그):
+//    A: 태그(단축어)  B: 파일명(확장자 제외)  C: 비고
+//    → 대화 시트 bg 컬럼에 태그 입력 → 해당 줄에서 배경 전환
+//    → 공백 = 이전 배경 유지
+//    → NONE = 배경 제거 (어둠)
+//    → 전환 방식: crossfade(기본) | instant | fade_black
+//
+//  BG_DATA 구조:
+//    { "A": "Background001", "B": "Background002" }
+//
+//  대화 시트 bg 컬럼:
+//    line_id | char | expr | text | choice | goto | flag_set | flag_check | sfx | fx | bg
+//    bg 태그는 해당 줄이 표시될 때 배경 전환을 트리거
 // ================================================================
 
 const XLSX   = require('xlsx');
@@ -41,7 +55,7 @@ const OUT_PATH  = path.join(__dirname, '..', 'DialogueData.js');
 // ── 상수 ─────────────────────────────────────────────────────────
 const HEADER_ROWS   = 4;   // 헤더+주석 행 수 (0-indexed: 행 0~3이 헤더)
 const DIALOGUE_MARK = '[DIALOGUE]';
-const SKIP_SHEETS   = ['CAST', 'BGM', 'SFX', 'FX', 'KEYWORD', '_양식'];
+const SKIP_SHEETS   = ['CAST', 'BG', 'BGM', 'SFX', 'FX', 'KEYWORD', '_양식'];
 
 // ── 유틸 ─────────────────────────────────────────────────────────
 const clean = v => (v === null || v === undefined || (typeof v === 'number' && isNaN(v))) ? null : String(v).trim();
@@ -73,6 +87,24 @@ function parseCast() {
   }
   // Player는 항상 고정
   if (!data['P']) data['P'] = { name: 'Player', nickname: null };
+  return data;
+}
+
+// ── BG_DATA 파싱 ──────────────────────────────────────────────────
+// 컬럼: A=태그, B=파일명(확장자 제외), C=비고
+function parseBg() {
+  const ws = wb.Sheets['BG'];
+  if (!ws) return {};
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+  const data = {};
+  for (let i = 0; i < rows.length; i++) {
+    const [tag, file] = rows[i];
+    const t = clean(tag);
+    const f = clean(file);
+    // 주석행(//로 시작) 및 헤더행 스킵
+    if (!t || t.startsWith('//') || t === '태그') continue;
+    if (f) data[t] = f;
+  }
   return data;
 }
 
@@ -120,7 +152,7 @@ function parseDialogue(sheetName) {
   const lineMap = {};   // line_id → index in lines[]
 
   for (let i = startRow; i < rows.length; i++) {
-    const [line_id, char, expr, text, choice, goto_, flag_set, flag_check, sfx, fx] = rows[i];
+    const [line_id, char, expr, text, choice, goto_, flag_set, flag_check, sfx, fx, bg] = rows[i];
     const id = clean(line_id);
     if (!id) continue;
 
@@ -135,6 +167,7 @@ function parseDialogue(sheetName) {
       flag_check: clean(flag_check)  || null,
       sfx:        clean(sfx)         || null,
       fx:         clean(fx)          || null,
+      bg:         clean(bg)          || null,   // 배경 태그 (BG_DATA 키)
     };
 
     lineMap[id] = lines.length;
@@ -185,6 +218,7 @@ function parseDialogue(sheetName) {
 
 // ── 메인 ─────────────────────────────────────────────────────────
 const CAST_DATA    = parseCast();
+const BG_DATA      = parseBg();
 const BGM_DATA     = parseBgm();
 const SFX_DATA     = parseSfx();
 const DIALOGUE_DATA = {};
@@ -217,6 +251,18 @@ const CAST_DATA = ${JSON.stringify(CAST_DATA, null, 2)};
 
 // ── BGM_DATA ──────────────────────────────────────────────────────
 const BGM_DATA = ${JSON.stringify(BGM_DATA, null, 2)};
+
+// ── BG_DATA ───────────────────────────────────────────────────────
+//
+//  구조: { "태그": "파일명" }  (파일명 = 확장자 제외)
+//  경로: Games/Assets/Sprites/Backgrounds/{파일명}.png
+//
+//  대화 시트 bg 컬럼 사용법:
+//    - 태그 입력 → 해당 라인 진입 시 배경 크로스페이드 전환
+//    - 공백     → 이전 배경 유지
+//    - NONE     → 배경 제거 (어둠 처리)
+//
+const BG_DATA = ${JSON.stringify(BG_DATA, null, 2)};
 
 // ── SFX_DATA ──────────────────────────────────────────────────────
 const SFX_DATA = ${JSON.stringify(SFX_DATA, null, 2)};

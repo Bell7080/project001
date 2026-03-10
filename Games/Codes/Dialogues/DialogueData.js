@@ -34,6 +34,23 @@ const BGM_DATA = {
   "Shop_In": "bgm_shop_theme"
 };
 
+// ── BG_DATA ───────────────────────────────────────────────────────
+//
+//  구조: { "태그": "파일명" }  (파일명 = 확장자 제외)
+//  경로: Games/Assets/Sprites/Backgrounds/{파일명}.png
+//
+//  대화 시트 bg 컬럼 사용법:
+//    - 태그 입력 → 해당 라인 진입 시 배경 크로스페이드 전환
+//    - 공백     → 이전 배경 유지
+//    - NONE     → 배경 제거 (어둠 처리)
+//
+const BG_DATA = {
+  "태그 (bg 컬럼에 입력)": "배경 파일명",
+  "A": "Background001",
+  "B": "Background002",
+  "C": "Background003"
+};
+
 // ── SFX_DATA ──────────────────────────────────────────────────────
 const SFX_DATA = {
   "Happy": "sfx_happy_001",
@@ -70,7 +87,8 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": null
+        "fx": "fade_in",
+        "bg": "A"
       },
       {
         "id": "002",
@@ -83,6 +101,7 @@ const DIALOGUE_DATA = {
         "flag_check": null,
         "sfx": null,
         "fx": null,
+        "bg": null,
         "choices": [
           {
             "label": "외곽 지부?",
@@ -102,7 +121,8 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": null
+        "fx": null,
+        "bg": null
       },
       {
         "id": "005",
@@ -115,6 +135,7 @@ const DIALOGUE_DATA = {
         "flag_check": null,
         "sfx": null,
         "fx": null,
+        "bg": null,
         "choices": [
           {
             "label": "부임이라니?",
@@ -134,7 +155,8 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": null
+        "fx": null,
+        "bg": null
       },
       {
         "id": "008",
@@ -146,7 +168,8 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": null
+        "fx": "slow_text",
+        "bg": null
       },
       {
         "id": "009",
@@ -158,7 +181,8 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": null
+        "fx": null,
+        "bg": null
       },
       {
         "id": "010",
@@ -170,7 +194,8 @@ const DIALOGUE_DATA = {
         "flag_set": null,
         "flag_check": null,
         "sfx": null,
-        "fx": null
+        "fx": null,
+        "bg": null
       }
     ],
     "lineMap": {

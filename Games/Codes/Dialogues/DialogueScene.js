@@ -5,7 +5,8 @@
 //  역할: 스토리 대화 이벤트 전용 씬 (스팀펑크 스타일)
 //        — 화면 중앙 하단 컴팩트 대화창
 //        — 좌측 캐릭터 일러스트 (Character_[name]_[expr].png)
-//        — 배경: Background_003.png
+//        — 배경: BG_DATA 태그 기반 동적 크로스페이드 전환
+//          (기존 하드코딩 Background_003.png → xlsx BG 탭으로 관리)
 //        — 이름판은 대화창 상단 좌측
 //        — 타자 방식 텍스트
 //        — 선택지 버튼
@@ -36,9 +37,22 @@ class DialogueScene extends Phaser.Scene {
 
   // ── preload ───────────────────────────────────────────────────
   preload() {
-    // 배경 이미지
-    if (!this.textures.exists('dlg_bg')) {
-      this.load.image('dlg_bg', 'Games/Assets/Sprites/Background_003.png');
+    // 배경 이미지 — BG_DATA 기반 동적 로드
+    if (typeof BG_DATA !== 'undefined') {
+      const loaded = new Set();
+      Object.values(BG_DATA).forEach(file => {
+        if (loaded.has(file)) return;
+        loaded.add(file);
+        const key = `bg_${file}`;
+        if (!this.textures.exists(key)) {
+          this.load.image(key, `Games/Assets/Sprites/Backgrounds/${file}.png`);
+        }
+      });
+    } else {
+      // BG_DATA 없을 때 폴백 — 기존 dlg_bg 유지
+      if (!this.textures.exists('dlg_bg')) {
+        this.load.image('dlg_bg', 'Games/Assets/Sprites/Background_003.png');
+      }
     }
 
     // 캐릭터 일러스트 — CAST_DATA 기준으로 전부 시도
@@ -73,6 +87,9 @@ class DialogueScene extends Phaser.Scene {
     this._charSprite       = null;
     this._waitingForChoice = false;
     this._pendingChoices   = null;
+    this._bgSpriteCur      = null;   // 현재 배경 스프라이트
+    this._bgSpriteNext     = null;   // 크로스페이드 중 새 배경
+    this._bgCurrentKey     = null;   // 현재 배경 텍스처 키
 
     const eventData = DIALOGUE_DATA[this._eventId];
     if (!eventData || !eventData.lines.length) {
@@ -160,20 +177,7 @@ class DialogueScene extends Phaser.Scene {
     this._fs = fs;
 
     // ── 배경 ──────────────────────────────────────────────────
-    if (this.textures.exists('dlg_bg')) {
-      const bg = this.add.image(W / 2, H / 2, 'dlg_bg')
-        .setDisplaySize(W, H);
-      // 어둡게 오버레이
-      this.add.rectangle(0, 0, W, H, 0x000000, 0.55).setOrigin(0);
-    } else {
-      // 폴백: 짙은 배경 + 그리드
-      this.add.rectangle(0, 0, W, H, 0x080a0f).setOrigin(0);
-      const grid = this.add.graphics();
-      const step = Math.round(W / 52);
-      grid.lineStyle(1, 0x0d1018, 0.6);
-      for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
-      for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
-    }
+    this._buildBackground(W, H);
 
     // ── 치수 ─────────────────────────────────────────────────
     // 대화창: 화면 너비 60%, 높이 26%, 하단 중앙
@@ -327,6 +331,120 @@ class DialogueScene extends Phaser.Scene {
     this._uiContainer.add(hint);
   }
 
+  // ── 배경 초기 빌드 ────────────────────────────────────────────
+  _buildBackground(W, H) {
+    // 폴백 배경 (항상 맨 아래 — 배경 이미지 없을 때 표시)
+    this._bgFallback = this.add.graphics();
+    this._bgFallback.fillStyle(0x080a0f).fillRect(0, 0, W, H);
+    const grid = this._bgFallback.lineBetween ? null : null;  // 그리드는 별도
+    this._bgGrid = this.add.graphics();
+    this._bgGrid.lineStyle(1, 0x0d1018, 0.6);
+    const step = Math.round(W / 52);
+    for (let x = 0; x <= W; x += step) this._bgGrid.lineBetween(x, 0, x, H);
+    for (let y = 0; y <= H; y += step) this._bgGrid.lineBetween(0, y, W, y);
+
+    // 배경 이미지 슬롯 A/B (크로스페이드용 더블 버퍼)
+    this._bgSpriteCur  = this.add.image(W / 2, H / 2, '__WHITE').setDisplaySize(W, H).setAlpha(0).setVisible(false);
+    this._bgSpriteNext = this.add.image(W / 2, H / 2, '__WHITE').setDisplaySize(W, H).setAlpha(0).setVisible(false);
+
+    // 공통 어두운 오버레이 — 배경 위, 캐릭터/UI 아래
+    this._bgOverlay = this.add.rectangle(0, 0, W, H, 0x000000, 0.55).setOrigin(0);
+
+    // 첫 이벤트 라인의 bg 태그로 초기 배경 결정
+    const firstBgTag = this._lines?.[0]?.bg;
+    if (firstBgTag) {
+      const texKey = this._resolvebgKey(firstBgTag);
+      if (texKey && this.textures.exists(texKey)) {
+        this._bgSpriteCur.setTexture(texKey).setAlpha(1).setVisible(true);
+        this._bgGrid.setVisible(false);
+        this._bgFallback.setVisible(false);
+        this._bgCurrentKey = texKey;
+      }
+    }
+  }
+
+  // ── 배경 전환 ─────────────────────────────────────────────────
+  //   bgTag  : BG_DATA 키 ('A', 'B', ...) 또는 'NONE'
+  //   mode   : 'crossfade'(기본) | 'instant' | 'fade_black'
+  _changeBg(bgTag, mode = 'crossfade') {
+    const W = this.W, H = this.H;
+
+    // NONE = 배경 제거 (이미지 페이드아웃, 폴백 보임)
+    if (bgTag === 'NONE') {
+      this.tweens.add({
+        targets: this._bgSpriteCur,
+        alpha: 0,
+        duration: 400,
+        onComplete: () => {
+          this._bgSpriteCur.setVisible(false);
+          this._bgGrid.setVisible(true);
+          this._bgFallback.setVisible(true);
+          this._bgCurrentKey = null;
+        },
+      });
+      return;
+    }
+
+    const texKey = this._resolvebgKey(bgTag);
+    if (!texKey || !this.textures.exists(texKey)) return;
+    if (texKey === this._bgCurrentKey) return;   // 같은 배경이면 전환 생략
+
+    if (mode === 'instant') {
+      this._bgSpriteCur.setTexture(texKey).setAlpha(1).setVisible(true);
+      this._bgGrid.setVisible(false);
+      this._bgFallback.setVisible(false);
+      this._bgCurrentKey = texKey;
+      return;
+    }
+
+    if (mode === 'fade_black') {
+      // 검은 화면으로 페이드아웃 → 새 배경으로 페이드인
+      this.tweens.add({
+        targets: this._bgOverlay,
+        alpha: 1,
+        duration: 250,
+        onComplete: () => {
+          this._bgSpriteCur.setTexture(texKey).setAlpha(1).setVisible(true);
+          this._bgGrid.setVisible(false);
+          this._bgFallback.setVisible(false);
+          this._bgCurrentKey = texKey;
+          this.tweens.add({ targets: this._bgOverlay, alpha: 0.55, duration: 300 });
+        },
+      });
+      return;
+    }
+
+    // 기본: crossfade — next를 새 배경으로, cur 위에서 페이드인
+    this._bgSpriteNext.setTexture(texKey).setAlpha(0).setVisible(true);
+    // next를 cur 위로 보내기
+    this.children.bringToTop(this._bgSpriteNext);
+    // overlay는 항상 배경 위에 유지
+    this.children.bringToTop(this._bgOverlay);
+
+    this.tweens.add({
+      targets:  this._bgSpriteNext,
+      alpha:    1,
+      duration: 500,
+      ease:     'Sine.easeInOut',
+      onComplete: () => {
+        // cur ↔ next 스왑
+        [this._bgSpriteCur, this._bgSpriteNext] = [this._bgSpriteNext, this._bgSpriteCur];
+        this._bgSpriteNext.setAlpha(0).setVisible(false);
+        this._bgGrid.setVisible(false);
+        this._bgFallback.setVisible(false);
+        this._bgCurrentKey = texKey;
+      },
+    });
+  }
+
+  // BG 태그 → 텍스처 키 변환
+  _resolvebgKey(bgTag) {
+    if (!bgTag || bgTag === 'NONE') return null;
+    const file = (typeof BG_DATA !== 'undefined') ? BG_DATA[bgTag] : null;
+    if (!file) return null;
+    return `bg_${file}`;
+  }
+
   // ── 캐릭터 슬롯 (화면 중앙, 발끝이 대화창 상단에 걸치게) ──────
   _buildCharacterSlot(W, H, BOX_X, BOX_Y, fs) {
     this._charH = Math.round(H * 0.75 * 0.85);   // 기존 대비 15% 축소
@@ -415,6 +533,20 @@ class DialogueScene extends Phaser.Scene {
 
     // 캐릭터 이미지
     this._updatePortrait(line.char, line.expr);
+
+    // 배경 전환 (bg 태그가 있을 때만)
+    if (line.bg) {
+      // bg 컬럼에 'instant:' 또는 'fade_black:' 접두어로 전환 모드 지정 가능
+      // 예: 'instant:A', 'fade_black:B', 'A' (기본=crossfade)
+      const colonIdx = line.bg.indexOf(':');
+      if (colonIdx > 0) {
+        const mode = line.bg.slice(0, colonIdx).trim();
+        const tag  = line.bg.slice(colonIdx + 1).trim();
+        this._changeBg(tag, mode);
+      } else {
+        this._changeBg(line.bg);
+      }
+    }
 
     // SFX
     if (line.sfx && typeof AudioManager !== 'undefined') {
