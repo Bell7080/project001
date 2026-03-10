@@ -45,10 +45,7 @@ const BGM_DATA = {
 //    - NONE     → 배경 제거 (어둠 처리)
 //
 const BG_DATA = {
-  "태그 (bg 컬럼에 입력)": "배경 파일명",
-  "A": "Background_003",
-  "B": "Background002",
-  "C": "Background003"
+  "A": "Background_003"
 };
 
 // ── SFX_DATA ──────────────────────────────────────────────────────

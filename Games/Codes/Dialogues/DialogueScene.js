@@ -37,38 +37,46 @@ class DialogueScene extends Phaser.Scene {
 
   // ── preload ───────────────────────────────────────────────────
   preload() {
-    // 배경 이미지 — BG_DATA 기반 동적 로드
-    if (typeof BG_DATA !== 'undefined') {
-      const loaded = new Set();
-      Object.values(BG_DATA).forEach(file => {
-        if (loaded.has(file)) return;
-        loaded.add(file);
-        const key = `bg_${file}`;
-        if (!this.textures.exists(key)) {
-          this.load.image(key, `Games/Assets/Sprites/Backgrounds/${file}.png`);
-        }
-      });
-    } else {
-      // BG_DATA 없을 때 폴백 — 기존 dlg_bg 유지
-      if (!this.textures.exists('dlg_bg')) {
-        this.load.image('dlg_bg', 'Games/Assets/Sprites/Background_003.png');
+    // 배경 이미지 — 이 이벤트에서 실제 사용된 bg 태그만 로드 (404 방지)
+    if (typeof BG_DATA !== 'undefined' && typeof DIALOGUE_DATA !== 'undefined') {
+      const eventData = DIALOGUE_DATA[this._eventId];
+      if (eventData) {
+        const usedTags = new Set(
+          eventData.lines.map(l => l.bg).filter(Boolean).map(b => {
+            const colon = b.indexOf(':');
+            return colon > 0 ? b.slice(colon + 1).trim() : b.trim();
+          })
+        );
+        usedTags.forEach(tag => {
+          if (tag === 'NONE') return;
+          const file = BG_DATA[tag];
+          if (!file) return;
+          const key = `bg_${file}`;
+          if (!this.textures.exists(key)) {
+            this.load.image(key, `Games/Assets/Sprites/${file}.png`);
+          }
+        });
       }
     }
 
     // 캐릭터 일러스트 — CAST_DATA 기준으로 전부 시도
     // 텍스처 키: Character_Noa_001 ~ 003
-    if (typeof CAST_DATA !== 'undefined') {
-      const loaded = new Set();
-      Object.values(CAST_DATA).forEach(cast => {
-        if (!cast.name || cast.name === 'Player') return;
-        if (loaded.has(cast.name)) return;
-        loaded.add(cast.name);
-        for (let i = 1; i <= 9; i++) {
-          const expr = String(i).padStart(3, '0');
-          const key  = `Character_${cast.name}_${expr}`;
-          if (!this.textures.exists(key)) {
-            this.load.image(key, `Games/Assets/Sprites/${key}.png`);
-          }
+    // 캐릭터 — 이 이벤트에서 실제 사용된 expr만 로드 (404 방지)
+    if (typeof CAST_DATA !== 'undefined' && typeof DIALOGUE_DATA !== 'undefined') {
+      const toLoad = new Set();
+      const eventData = DIALOGUE_DATA[this._eventId];
+      if (eventData) {
+        eventData.lines.forEach(line => {
+          if (!line.char || line.char === 'P') return;
+          const cast = CAST_DATA[line.char];
+          if (!cast || cast.name === 'Player') return;
+          const expr = line.expr ? String(line.expr).padStart(3, '0') : '001';
+          toLoad.add(`Character_${cast.name}_${expr}`);
+        });
+      }
+      toLoad.forEach(key => {
+        if (!this.textures.exists(key)) {
+          this.load.image(key, `Games/Assets/Sprites/${key}.png`);
         }
       });
     }

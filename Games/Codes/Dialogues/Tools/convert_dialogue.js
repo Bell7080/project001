@@ -92,18 +92,18 @@ function parseCast() {
 
 // ── BG_DATA 파싱 ──────────────────────────────────────────────────
 // 컬럼: A=태그, B=파일명(확장자 제외), C=비고
+// 헤더 구조: 행0=타이틀, 행1~2=주석, 행3=컬럼명 → HEADER_ROWS(4)부터 데이터
 function parseBg() {
   const ws = wb.Sheets['BG'];
   if (!ws) return {};
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
   const data = {};
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = HEADER_ROWS; i < rows.length; i++) {
     const [tag, file] = rows[i];
     const t = clean(tag);
     const f = clean(file);
-    // 주석행(//로 시작) 및 헤더행 스킵
-    if (!t || t.startsWith('//') || t === '태그') continue;
-    if (f) data[t] = f;
+    if (!t || !f) continue;
+    data[t] = f;
   }
   return data;
 }
