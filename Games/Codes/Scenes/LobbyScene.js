@@ -198,11 +198,11 @@ class LobbyScene extends Phaser.Scene {
         ];
 
     items.forEach((item, i) => {
-      this._makeMenuButton(item.label, x, baseY + gap * i, item.key, item.delay);
+      this._makeMenuButton(item.label, x, baseY + gap * i, item.key, item.delay, W);
     });
   }
 
-  _makeMenuButton(label, x, y, key, delay) {
+  _makeMenuButton(label, x, y, key, delay, W) {
     const indent = Math.round(W * 0.018);
     const shift  = Math.round(W * 0.008);
 
