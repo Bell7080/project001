@@ -101,15 +101,17 @@ Tab_Recruit.prototype._buildReady = function () {
     fontSize: this._fs(24), fill: '#c8a070', fontFamily: FontManager.TITLE,
   }).setOrigin(0.5).setAlpha(0);
 
+  // ✏️ hit은 씬 직접 추가 — 컨테이너가 tween으로 이동 시 hit 영역이 갱신 안 되는 버그 방지
   const hit = scene.add.rectangle(cx, btnY, btnW, btnH, 0, 0)
-    .setInteractive({ useHandCursor: true });
+    .setInteractive({ useHandCursor: true }).setDepth(20);
 
   hit.on('pointerover', () => { drawBtn('hover');  btnTxt.setStyle({ fill: '#e8c080' }); });
   hit.on('pointerout',  () => { drawBtn('normal'); btnTxt.setStyle({ fill: '#c8a070' }); });
   hit.on('pointerdown', () => { drawBtn('down');   btnTxt.setStyle({ fill: '#a07040' }); });
   hit.on('pointerup',   () => this._onHire());
 
-  this._container.add([panel, deco, recruitLabel, lineG, txt, priceLabel, this._priceTxt, btnGlow, btnBg, btnTxt, hit]);
+  this._container.add([panel, deco, recruitLabel, lineG, txt, priceLabel, this._priceTxt, btnGlow, btnBg, btnTxt]);
+  this._sceneHits.push(hit);
 
   // ── 등장 연출 ───────────────────────────────────────────────
   this._delay(80, () => {

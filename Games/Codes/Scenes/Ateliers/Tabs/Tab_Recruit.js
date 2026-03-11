@@ -30,9 +30,10 @@ class Tab_Recruit {
     this.rerolls      = {};
     this._lockOverlay = null;
 
-    this._container = scene.add.container(0, 0);
-    this._timers = [];
-    this._tweens = [];
+    this._container  = scene.add.container(0, 0);
+    this._timers     = [];
+    this._tweens     = [];
+    this._sceneHits  = [];   // 씬 직접 추가한 hit 박스 추적 (컨테이너 이동 시 좌표 어긋남 방지)
 
     this._buildReady();
   }
@@ -54,8 +55,10 @@ class Tab_Recruit {
 
     this._timers.forEach(t => { if (t && t.remove) t.remove(); });
     this._tweens.forEach(t => { if (t && t.stop)   t.stop();   });
-    this._timers = [];
-    this._tweens = [];
+    this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
+    this._timers     = [];
+    this._tweens     = [];
+    this._sceneHits  = [];
     this._container.destroy();
   }
 

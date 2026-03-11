@@ -710,11 +710,13 @@ Tab_Recruit.prototype._makeRerollBtn = function (cx, y, w, label, cb, h) {
     fontSize: this._fs(11), fill: '#7a5028', fontFamily: FontManager.MONO,
   }).setOrigin(0.5);
   this._container.add(txt);
-  const hit = scene.add.rectangle(cx, y, w, h, 0, 0).setInteractive({ useHandCursor: true });
-  this._container.add(hit);
+  // ✏️ hit은 씬 직접 추가 — 컨테이너 이동 시 좌표 어긋남 방지
+  const hit = scene.add.rectangle(cx, y, w, h, 0, 0)
+    .setInteractive({ useHandCursor: true }).setDepth(20);
   hit.on('pointerover', () => draw(true,  false));
   hit.on('pointerout',  () => draw(false, false));
   hit.on('pointerdown', () => cb());
+  this._sceneHits.push(hit);
   return { bg, txt, hit, draw };
 };
 

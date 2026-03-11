@@ -124,14 +124,10 @@ const TM_Layout = {
       fontSize: fs(18), fill: '#4a2a10', fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
 
-    // ✏️ setDepth(500) 제거 — 컨테이너 내부 객체는 씬 depth 미사용
-    //    depth는 _container(=Tab_Manage_Full._container) 레벨에서만 관리
     const btn = scene.add.text(origX, btnY, '← 돌아가기', {
       fontSize: fs(26), fill: '#7a5030', fontFamily: FontManager.TITLE,
-    }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
+    }).setOrigin(0, 0.5);
 
-    // ✏️ ulG를 _backBtn 컨테이너 자식으로 추가
-    //    → _backBtn.setVisible(false) / destroy() 시 함께 제어됨
     const ulG = scene.add.graphics();
     const drawUL = (on) => {
       ulG.clear();
@@ -145,29 +141,35 @@ const TM_Layout = {
       );
     };
 
-    btn.on('pointerover', () => {
+    // ✏️ 돌아가기 버튼 hit 박스도 씬 직접 추가
+    //    컨테이너(_backBtn)가 tween으로 x/y 이동하면 Text.setInteractive 영역이 갱신 안 됨
+    //    → 씬 레벨 Rectangle로 분리, depth 20 부여
+    const btnW = parseInt(fs(26)) * 6;
+    const btnH = parseInt(fs(30));
+    const hit  = scene.add.rectangle(origX + btnW / 2, btnY, btnW, btnH, 0, 0)
+      .setInteractive({ useHandCursor: true }).setDepth(20);
+
+    hit.on('pointerover', () => {
       scene.tweens.add({ targets: btn, x: origX + shift, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#e8c080' });
       marker.setStyle({ fill: '#c06820' });
       ulG.setAlpha(1);
       drawUL(true);
     });
-    btn.on('pointerout', () => {
+    hit.on('pointerout', () => {
       scene.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#7a5030' });
       marker.setStyle({ fill: '#4a2a10' });
       ulG.setAlpha(0);
       drawUL(false);
     });
-
-    // ✏️ pointerdown 단독 사용 (pointerdown+pointerup 이중 등록 제거)
-    //    pointerup까지 기다릴 필요 없고, 이중 호출 위험도 제거
-    btn.on('pointerdown', () => {
+    hit.on('pointerdown', () => {
       if (tab.onBack) tab.onBack();
     });
 
-    // ✏️ marker, btn, ulG 모두 _backBtn 컨테이너에 추가
-    //    → AtelierScene._exitManageFull 의 tween 대상(_backBtn)에 포함됨
+    // hit은 _detailObjs로 추적 (destroy 시 정리)
+    tab._detailObjs.push(hit);
+
     tab._backBtn.add([marker, btn, ulG]);
     tab._backBtn._origX = origX;
     tab._container.add(tab._backBtn);

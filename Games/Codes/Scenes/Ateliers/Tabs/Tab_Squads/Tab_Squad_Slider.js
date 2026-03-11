@@ -351,6 +351,9 @@ Object.assign(Tab_Squad.prototype, {
   _rebuildFilterBar(panelX, panelW, fy) {
     this._filterBarObjs.forEach(o => o.destroy());
     this._filterBarObjs = [];
+    // hit2들도 함께 정리 후 재생성
+    this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
+    this._sceneHits = [];
     const JOB = [
       { key: 'all', label: '전체' }, { key: 'fisher', label: '낚시꾼' },
       { key: 'diver', label: '잠수부' }, { key: 'ai', label: 'AI' },
@@ -392,16 +395,16 @@ Object.assign(Tab_Squad.prototype, {
       fontSize: fs2, fill: active ? '#e8a040' : '#5a3818', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
     const hit2 = scene.add.rectangle(x + bw / 2, y + bh / 2, bw, bh, 0, 0)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true }).setDepth(20);
     hit2.on('pointerover', () => draw2(true));
     hit2.on('pointerout',  () => draw2(false));
     hit2.on('pointerup',   onClick);
+    // ✏️ hit2는 씬 직접 추가 — 컨테이너 이동 시 좌표 어긋남 방지
     if (tracked) {
-      this._filterBarObjs.push(bg2, txt2, hit2);
-      this._container.add([bg2, txt2, hit2]);  // ✏️ container에 추가해야 hide()시 함께 숨겨짐
-    } else {
-      this._container.add([bg2, txt2, hit2]);
+      this._filterBarObjs.push(bg2, txt2);  // hit2는 _sceneHits로만 추적 (중복 destroy 방지)
     }
+    this._container.add([bg2, txt2]);
+    this._sceneHits.push(hit2);
     return x + bw + 4;
   },
 
@@ -436,6 +439,10 @@ Object.assign(Tab_Squad.prototype, {
     this._closeSquadPopup();
     if (this._sliderMaskGfx) { this._sliderMaskGfx.destroy(); this._sliderMaskGfx = null; }
     if (this._gridSubContainer) { this._gridSubContainer.destroy(true); this._gridSubContainer = null; }
+    if (this._sceneHits) {
+      this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
+      this._sceneHits = [];
+    }
     const si = this.scene.input;
     if (this._sliderOnDown)  si.off('pointerdown', this._sliderOnDown);
     if (this._sliderOnMove)  si.off('pointermove', this._sliderOnMove);

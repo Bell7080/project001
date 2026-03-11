@@ -67,8 +67,8 @@ class Tab_Manage_Full {
     const pm = Math.round(W * 0.012);
     this._panelMargin = pm;
 
-    this._listW   = Math.round(W * 0.21);
-    this._centerW = Math.round(W * 0.44);
+    this._listW   = Math.round(W * 0.20);
+    this._centerW = Math.round(W * 0.47);
     this._rightW  = W - this._listW - this._centerW;
     this._bodyY   = hdrH + 1 + pm;
     this._bodyH   = H - hdrH - 1 - pm * 2 - backBtnH;

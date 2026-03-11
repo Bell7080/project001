@@ -63,6 +63,9 @@ const TM_RightPanel = {
     // ✏️ addR: _rightPanel 컨테이너에 추가 + _rightDetailObjs에 추적
     //    → tab.destroy() 또는 _rightPanel.setVisible(false) 시 함께 제어
     const addR = (obj) => { tab._rightPanel.add(obj); tab._rightDetailObjs.push(obj); return obj; };
+    // ✏️ addHit: 인터랙티브 히트박스는 씬에 직접 추가
+    //    Phaser 컨테이너 안 setInteractive는 씬 절대좌표와 어긋나 클릭 불가
+    const addHit = (obj) => { obj.setDepth(20); tab._rightDetailObjs.push(obj); return obj; };
 
     // ── 툴팁 ────────────────────────────────────────────────
     let _tip = null;
@@ -241,7 +244,7 @@ const TM_RightPanel = {
 
       addR(hBg);
       addR(hTxt);
-      addR(hHit);
+      addHit(hHit);
     }
 
     tab._detailTweens = _persistTweens;
@@ -362,7 +365,7 @@ const TM_RightPanel = {
 
       addR(statT);
       addR(valT);
-      addR(statHit);
+      addHit(statHit);
 
       // ── + 버튼 ────────────────────────────────────────────
       const btnX   = colX + colW - plusW / 2 - 3;
@@ -429,7 +432,7 @@ const TM_RightPanel = {
 
       addR(plusBg);
       addR(plusTxt);
-      addR(pH);
+      addHit(pH);
       _plusButtons.push({ bg: plusBg, txt: plusTxt, hit: pH });
     });
 
@@ -522,7 +525,7 @@ const TM_RightPanel = {
       tipHit.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, `[ ${name} ]\n\n${desc}`));
       tipHit.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
       tipHit.on('pointerout',  ()    => _hideTip());
-      addR(tipHit);
+      addHit(tipHit);
 
       curY += boxH + gap;
     });

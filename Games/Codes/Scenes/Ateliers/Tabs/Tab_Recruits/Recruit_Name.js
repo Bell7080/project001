@@ -37,13 +37,13 @@ Tab_Recruit.prototype._buildNameField = function (cx, y, bw) {
   }).setOrigin(0.5);
   this._container.add(this._nameTxt);
 
-  // 히트 영역
+  // ✏️ hit은 씬 직접 추가 — 컨테이너 이동 시 좌표 어긋남 방지
   const hit = scene.add.rectangle(cx, y, fW, fH, 0, 0)
-    .setInteractive({ useHandCursor: true });
-  this._container.add(hit);
+    .setInteractive({ useHandCursor: true }).setDepth(20);
   hit.on('pointerover',  () => { if (!this._nameEditing) this._drawNameField('hover'); });
   hit.on('pointerout',   () => { if (!this._nameEditing) this._drawNameField('normal'); });
   hit.on('pointerdown',  () => this._startNameEdit());
+  this._sceneHits.push(hit);
 
   // 필드 바깥 클릭 → 확정
   scene.input.on('pointerdown', (ptr) => {

@@ -152,15 +152,15 @@ Object.assign(Tab_Squad.prototype, {
       );
     }
 
-    // ── 셀 히트 영역 — 캐릭터보다 먼저 추가해야 img가 위에 그려짐
-    // (컨테이너 내부는 depth 무시, 추가 순서 = 렌더 순서)
+    // ── 셀 히트 영역 — 씬 직접 추가 (컨테이너 이동 시 좌표 어긋남 방지)
     const hit = scene.add.rectangle(cx, cy, size, size, 0, 0)
-      .setInteractive({ useHandCursor: false });
+      .setInteractive({ useHandCursor: false }).setDepth(20);
     hit.on('pointerover', () => {
       if (!this._dragGhost) drawCell(true, false);
     });
     hit.on('pointerout',  () => drawCell(false, false));
-    this._gridSubContainer.add(hit);
+    this._gridSubContainer.add(hit);   // 렌더용 컨테이너에도 추가 (visibility 동기화)
+    this._sceneHits.push(hit);
 
     // ── 캐릭터 배치 — 좌측 세로, 인원수별 위치, 고정 크기, 클릭 제거 ──
     if (count > 0) {
@@ -187,26 +187,23 @@ Object.assign(Tab_Squad.prototype, {
 
         if (char.spriteKey && scene.textures.exists(char.spriteKey)) {
           const img = scene.add.image(charCx, footY, char.spriteKey)
-            .setOrigin(0.5, 1)
-            .setInteractive({ useHandCursor: true });
+            .setOrigin(0.5, 1);
 
           const sc = Math.min(spriteFixW / img.width, spriteFixH / img.height);
           img.setScale(sc);
 
-          // 호버 시 붉은 틴트 — "클릭하면 제거" 시각 피드백
-          img.on('pointerover', () => {
-            if (!this._dragGhost) img.setTint(0xff8888);
-          });
-          img.on('pointerout', () => img.clearTint());
-
-          // 클릭 시 해당 캐릭터만 슬롯에서 제거
-          img.on('pointerup', () => {
+          // ✏️ 이미지 hit도 씬 직접 Rectangle로 분리
+          const imgHit = scene.add.rectangle(charCx, footY - spriteFixH * 0.5, spriteFixW, spriteFixH, 0, 0)
+            .setInteractive({ useHandCursor: true }).setDepth(21);
+          imgHit.on('pointerover', () => { if (!this._dragGhost) img.setTint(0xff8888); });
+          imgHit.on('pointerout',  () => img.clearTint());
+          imgHit.on('pointerup',   () => {
             if (this._dragGhost) return;
             this._removeCharFromSlot(idx, char.id);
           });
 
-          // hit보다 나중에 추가 → 컨테이너 렌더 순서상 위에 그려져 이벤트 우선
           this._gridSubContainer.add(img);
+          this._sceneHits.push(imgHit);
 
         } else {
           const JOB_SHORT = { fisher: 'FISH', diver: 'DIVE', ai: 'A·I' };
@@ -214,13 +211,16 @@ Object.assign(Tab_Squad.prototype, {
             JOB_SHORT[char.job] || '???', {
             fontSize: scaledFontSize(7, scene.scale),
             fill: '#5a7888', fontFamily: FontManager.MONO,
-          }).setOrigin(0.5, 0.5)
-            .setInteractive({ useHandCursor: true });
-          fallback.on('pointerup', () => {
+          }).setOrigin(0.5, 0.5);
+          // ✏️ fallback hit도 씬 직접 Rectangle로 분리
+          const fbHit = scene.add.rectangle(charCx, footY - spriteFixH * 0.5, spriteFixW, spriteFixH, 0, 0)
+            .setInteractive({ useHandCursor: true }).setDepth(21);
+          fbHit.on('pointerup', () => {
             if (this._dragGhost) return;
             this._removeCharFromSlot(idx, char.id);
           });
           this._gridSubContainer.add(fallback);
+          this._sceneHits.push(fbHit);
         }
       });
 
@@ -293,6 +293,11 @@ Object.assign(Tab_Squad.prototype, {
     if (this._gridSubContainer) {
       this._gridSubContainer.destroy(true);
       this._gridSubContainer = null;
+    }
+    // 씬 직접 추가한 grid hit들 정리
+    if (this._sceneHits) {
+      this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
+      this._sceneHits = [];
     }
     this._gridCells = [];
 

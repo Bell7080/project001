@@ -9,8 +9,9 @@ class Tab_Explore {
     this.W = W;
     this.H = H;
     this._container = scene.add.container(0, 0);
-    this._timers = [];
-    this._tweens = [];
+    this._timers    = [];
+    this._tweens    = [];
+    this._sceneHits = [];   // 씬 직접 추가한 hit 박스 추적
     this._build();
   }
 
@@ -147,12 +148,15 @@ class Tab_Explore {
       }
     });
 
-    // ── 모두 container에 추가 ────────────────────────────────
+    // ── 모두 container에 추가 (hit 제외 — 씬 직접 추가로 분리) ──
     this._container.add([
       panel, deco, labelTxt, lineG,
       txt,
-      btnGlow, btnBg, btnTxt, hit,
+      btnGlow, btnBg, btnTxt,
     ]);
+    // ✏️ hit은 씬 직접 추가 — 컨테이너 tween 이동 시 좌표 어긋남 방지
+    hit.setDepth(20);
+    this._sceneHits.push(hit);
 
     // ── 타이핑 시퀀스 시작 ───────────────────────────────────
     this._delay(80, () => {
@@ -236,8 +240,10 @@ class Tab_Explore {
   destroy() {
     this._timers.forEach(t => { if (t && t.remove) t.remove(); });
     this._tweens.forEach(t => { if (t && t.stop)   t.stop();   });
-    this._timers = [];
-    this._tweens = [];
+    this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
+    this._timers    = [];
+    this._tweens    = [];
+    this._sceneHits = [];
     this._container.destroy();
   }
 }

@@ -28,6 +28,7 @@ class Tab_Squad {
     this._filterJob     = 'all';
     this._filterCog     = 'all';
     this._filterBarObjs = [];
+    this._sceneHits     = [];   // 씬 직접 추가한 hit 박스 추적
 
     // ── 슬라이더 상태 ───────────────────────────────────────────
     this._sliderOffset  = 0;

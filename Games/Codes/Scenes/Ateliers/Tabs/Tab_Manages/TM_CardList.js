@@ -161,12 +161,14 @@ const TM_CardList = {
     }).setOrigin(0.5);
 
     const hit = scene.add.rectangle(x + bw / 2, y + h / 2, bw, h, 0, 0)
-      .setInteractive({ useHandCursor: true });
+      .setInteractive({ useHandCursor: true }).setDepth(20);
     hit.on('pointerover', () => draw(true));
     hit.on('pointerout',  () => draw(false));
     hit.on('pointerup',   onClick);
 
-    tab._listPanel.add([bg, txt, hit]);
+    // ✏️ hit은 씬에 직접 추가 (컨테이너에 넣으면 Phaser interactive 좌표계 충돌)
+    //    bg/txt는 컨테이너에 추가하여 렌더 순서 유지
+    tab._listPanel.add([bg, txt]);
     tab._filterBarObjs.push(bg, txt, hit);
     return x + bw + 3;
   },
