@@ -19,8 +19,8 @@ class AtelierHUD {
     const { scene, W, H } = this;
     const cx   = W / 2;
     const topY = H * 0.045;
-    const barH = parseInt(scaledFontSize(48, scene.scale));   // 32 × 1.5
-    const gap  = parseInt(scaledFontSize(9,  scene.scale));   // 6 × 1.5
+    const barH = Math.round(H * 0.055);  // 화면 높이 비율 기반
+    const gap  = Math.round(W * 0.006);
 
     const { day } = SaveManager.getProgress();
     const arc     = this._getArc();
@@ -54,18 +54,18 @@ class AtelierHUD {
     arcBg.lineStyle(1, 0x3a2008, 0.6);
     arcBg.strokeRect(arcX + 2, topY - barH / 2 + 2, arcW - 4, barH - 4);
 
-    scene.add.text(arcX + parseInt(scaledFontSize(15, scene.scale)), topY,  // 10 × 1.5
+    scene.add.text(arcX + Math.round(W * 0.01), topY,
       'ARC', {
-      fontSize:      scaledFontSize(23, scene.scale),   // 15 × 1.5
+      fontSize:      scaledFontSize(23, scene.scale),
       fill:          '#c8881a',
       fontFamily:    FontManager.MONO,
       fontStyle:     'bold',
       letterSpacing: 3,
     }).setOrigin(0, 0.5);
 
-    this._arcNumTxt = scene.add.text(arcX + arcW - parseInt(scaledFontSize(15, scene.scale)), topY,
+    this._arcNumTxt = scene.add.text(arcX + arcW - Math.round(W * 0.01), topY,
       `${arc}`, {
-      fontSize:      scaledFontSize(21, scene.scale),   // 14 × 1.5
+      fontSize:      scaledFontSize(21, scene.scale),
       fill:          '#f0c050',
       fontFamily:    FontManager.MONO,
       letterSpacing: 1,

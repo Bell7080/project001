@@ -182,7 +182,7 @@ class LobbyScene extends Phaser.Scene {
     const hasSave = SaveManager.hasSave();
     const x     = W * 0.07;
     const baseY = H * 0.68;
-    const gap   = parseInt(scaledFontSize(66, this.scale));  // 44 × 1.5
+    const gap   = Math.round(H * 0.075);  // 화면 높이 비율 기반 간격
 
     const items = hasSave
       ? [
@@ -203,8 +203,8 @@ class LobbyScene extends Phaser.Scene {
   }
 
   _makeMenuButton(label, x, y, key, delay) {
-    const indent = parseInt(scaledFontSize(27, this.scale));  // 18 × 1.5
-    const shift  = parseInt(scaledFontSize(12, this.scale));  // 8 × 1.5
+    const indent = Math.round(W * 0.018);
+    const shift  = Math.round(W * 0.008);
 
     const marker = this.add.text(x - indent, y, '│', {
       fontSize: scaledFontSize(26, this.scale),  // 17 × 1.5

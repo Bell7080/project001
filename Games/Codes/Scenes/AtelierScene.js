@@ -190,7 +190,7 @@ class AtelierScene extends Phaser.Scene {
     leftItems.forEach((item, i) => {
       const refs = this._makeSideButton(
         item.label, W * 0.07,
-        H * 0.25 + i * parseInt(scaledFontSize(52, this.scale)),
+        H * 0.25 + i * Math.round(H * 0.075),
         item.key, false, i
       );
       this._sideButtonRefs.push({ key: item.key, ...refs });
@@ -207,7 +207,7 @@ class AtelierScene extends Phaser.Scene {
     rightItems.forEach((item, i) => {
       const refs = this._makeSideButton(
         item.label, W * 0.93,
-        H * 0.22 + i * parseInt(scaledFontSize(52, this.scale)),
+        H * 0.22 + i * Math.round(H * 0.075),
         item.key, true, i
       );
       this._sideButtonRefs.push({ key: item.key, ...refs });
@@ -332,24 +332,26 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _buildTopButtons(W, H) {
-    const bh  = parseInt(scaledFontSize(30, this.scale));
-    const bw  = parseInt(scaledFontSize(80, this.scale));
+    // 버튼 크기: 해상도 비율 기반 (폰트 함수 대신 W/H 직접 사용)
+    const bh  = Math.round(H * 0.045);
+    const bw  = Math.round(W * 0.075);
+    const gap = Math.round(W * 0.008);
     const y   = H * 0.04;
 
     const { bg: settingsBg, hit: settingsHit } = this._makeTopButton(
-      '설  정', W * 0.50 - bw - 8, y, bw, bh,
+      '설  정', W * 0.50 - bw / 2 - gap, y, bw, bh,
       () => this.scene.start('SettingsScene', { from: 'AtelierScene' })
     );
     const { bg: lobbyBg, hit: lobbyHit } = this._makeTopButton(
-      '로  비', W * 0.50 + 8, y, bw, bh,
+      '로  비', W * 0.50 + bw / 2 + gap, y, bw, bh,
       () => this._goLobby()
     );
 
     this._uiAnimTargets.push(
-      { obj: settingsBg,  originX: W * 0.50 - bw - 8, originY: y, dir: 'up', delay: 100 },
-      { obj: settingsHit, originX: W * 0.50 - bw - 8, originY: y, dir: 'up', delay: 100 },
-      { obj: lobbyBg,     originX: W * 0.50 + 8, originY: y, dir: 'up', delay: 130 },
-      { obj: lobbyHit,    originX: W * 0.50 + 8, originY: y, dir: 'up', delay: 130 }
+      { obj: settingsBg,  originX: W * 0.50 - bw / 2 - gap, originY: y, dir: 'up', delay: 100 },
+      { obj: settingsHit, originX: W * 0.50 - bw / 2 - gap, originY: y, dir: 'up', delay: 100 },
+      { obj: lobbyBg,     originX: W * 0.50 + bw / 2 + gap, originY: y, dir: 'up', delay: 130 },
+      { obj: lobbyHit,    originX: W * 0.50 + bw / 2 + gap, originY: y, dir: 'up', delay: 130 }
     );
   }
 

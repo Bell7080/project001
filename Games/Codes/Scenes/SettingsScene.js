@@ -70,12 +70,12 @@ class SettingsScene extends Phaser.Scene {
   // ── 제목 ──────────────────────────────────────────────────────
   _buildTitle(W, H, cx) {
     this.add.text(cx, H * 0.09, '설  정', {
-      fontSize: scaledFontSize(45, this.scale),   // 30 × 1.5
+      fontSize: scaledFontSize(45, this.scale),
       fill: '#6b4020',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
-    this.add.text(cx, H * 0.09 + parseInt(scaledFontSize(36, this.scale)), 'SETTINGS', {  // 24 × 1.5
-      fontSize: scaledFontSize(18, this.scale),   // 12 × 1.5
+    this.add.text(cx, H * 0.09 + Math.round(H * 0.05), 'SETTINGS', {
+      fontSize: scaledFontSize(18, this.scale),
       fill: '#2a1508',
       fontFamily: FontManager.MONO,
       letterSpacing: 5,
@@ -85,7 +85,7 @@ class SettingsScene extends Phaser.Scene {
   // ── 탭 바 ─────────────────────────────────────────────────────
   _buildTabBar(W, H, cx) {
     const tabY  = H * 0.20;
-    const tabH  = parseInt(scaledFontSize(57, this.scale));   // 38 × 1.5
+    const tabH  = Math.round(H * 0.055);  // 화면 높이 비율 기반
     const gap   = W * 0.012;
     const tabs  = [
       { key: 'font',  label: '폰트'   },

@@ -5,8 +5,8 @@
 //  역할: 어느 씬에서도 사용하는 전역 유틸 함수
 //
 //  기준 해상도: 1920 × 1080
-//  최소 배율 1.0 — 1080p 미만 환경에서도 폰트 크기 유지
-//  최대 비례  — 4K 등 큰 화면에서는 자동으로 커짐
+//  하한선 0.50 — 작은 화면에서도 최소 절반 크기 보장
+//  상한 없음   — 4K 등 큰 화면에서는 자동으로 커짐
 // ================================================================
 
 /**
@@ -18,5 +18,15 @@
 function scaledFontSize(basePx, sceneScale) {
   const s = sceneScale || { width: window.innerWidth, height: window.innerHeight };
   const ratio = Math.min(s.width / 1920, s.height / 1080);
-  return `${Math.round(basePx * Math.max(ratio, 1.0))}px`;
+  return `${Math.round(basePx * Math.max(ratio, 0.50))}px`;
+}
+
+/**
+ * 해상도 비율 반환 (레이아웃 계산용)
+ * @param {object} sceneScale - Phaser scene.scale 객체
+ * @returns {number}
+ */
+function scaleRatio(sceneScale) {
+  const s = sceneScale || { width: window.innerWidth, height: window.innerHeight };
+  return Math.min(s.width / 1920, s.height / 1080);
 }

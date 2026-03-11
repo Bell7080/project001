@@ -191,12 +191,12 @@ class DialogueScene extends Phaser.Scene {
     this._buildBackground(W, H);
 
     // ── 치수 ─────────────────────────────────────────────────
-    // 대화창: 화면 너비 60%, 높이 26%, 하단 중앙
-    const BOX_W  = Math.round(W * 0.60);
-    const BOX_H  = Math.round(H * 0.26);
+    // 대화창: 화면 너비 68%, 높이 30%, 하단 중앙
+    const BOX_W  = Math.round(W * 0.68);
+    const BOX_H  = Math.round(H * 0.30);
     const BOX_X  = Math.round((W - BOX_W) / 2);   // 좌측 X
     const BOX_Y  = Math.round(H - BOX_H - H * 0.04);
-    const PAD    = fs(16);
+    const PAD    = fs(18);
     const TEXT_X = BOX_X + PAD;
     const TEXT_Y = BOX_Y + PAD + fs(10);   // 이름판 아래에서 시작
     const TEXT_W = BOX_W - PAD * 2;
@@ -289,7 +289,7 @@ class DialogueScene extends Phaser.Scene {
 
     this._nameTxt = this.add.text(
       NX + NW / 2, NY + NH / 2, '', {
-      fontSize:        `${fs(20)}px`,   // 폰트 크게
+      fontSize:        `${fs(26)}px`,   // 이름 폰트 크게
       fill:            '#e8c87a',
       fontFamily:      FontManager.TITLE,
       stroke:          '#050810',
@@ -300,7 +300,7 @@ class DialogueScene extends Phaser.Scene {
     // ── 본문 텍스트 ───────────────────────────────────────────
     this._bodyTxt = this.add.text(
       TEXT_X, TEXT_Y + fs(28), '', {   // 위치 아래로
-      fontSize:    `${fs(20)}px`,      // 폰트 크게
+      fontSize:    `${fs(26)}px`,      // 본문 폰트 크게
       fill:        '#d8cbb8',
       fontFamily:  FontManager.BODY,
       wordWrap:    { width: TEXT_W },
@@ -725,7 +725,7 @@ class DialogueScene extends Phaser.Scene {
       // ◆ 다이아 마커
       const marker = this.add.text(
         bx + fs(20), by + BTN_H / 2, '◆', {
-        fontSize:   `${fs(9)}px`,
+        fontSize:   `${fs(13)}px`,
         fill:       '#8a6020',
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5, 0.5);
@@ -733,7 +733,7 @@ class DialogueScene extends Phaser.Scene {
       // 선택지 텍스트
       const lbl = this.add.text(
         bx + fs(34), by + BTN_H / 2, choice.label, {
-        fontSize:   `${fs(15)}px`,
+        fontSize:   `${fs(20)}px`,
         fill:       '#c8a858',
         fontFamily: FontManager.BODY,
         wordWrap:   { width: BTN_W - fs(44) },
