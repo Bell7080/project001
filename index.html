@@ -32,7 +32,14 @@
     #fs-overlay {
       position: fixed;
       inset: 0;
-      background: #050407;
+
+      /* ★ 타이틀 배경 이미지 (Background_001) — cover 방식으로 꽉 채움 */
+      background-color: #050407;
+      background-image: url('Games/Assets/Sprites/Background_001.png');
+      background-size: cover;
+      background-position: center center;
+      background-repeat: no-repeat;
+
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -43,22 +50,38 @@
       overflow: hidden;
     }
 
+    /* 이미지 위 어두운 오버레이 — UI 가독성 확보 */
     #fs-overlay::before {
       content: '';
       position: absolute;
       inset: 0;
+      background:
+        linear-gradient(
+          to bottom,
+          rgba(5, 4, 7, 0.55) 0%,
+          rgba(5, 4, 7, 0.35) 40%,
+          rgba(5, 4, 7, 0.55) 100%
+        );
+      /* 스캔라인 */
       background-image:
+        linear-gradient(
+          to bottom,
+          rgba(5, 4, 7, 0.55) 0%,
+          rgba(5, 4, 7, 0.35) 40%,
+          rgba(5, 4, 7, 0.55) 100%
+        ),
         repeating-linear-gradient(
           0deg,
           transparent,
           transparent 2px,
-          rgba(180, 100, 30, 0.018) 2px,
-          rgba(180, 100, 30, 0.018) 4px
+          rgba(0, 0, 0, 0.10) 2px,
+          rgba(0, 0, 0, 0.10) 4px
         );
       pointer-events: none;
       z-index: 0;
     }
 
+    /* 중앙 원형 글로우 */
     #fs-overlay::after {
       content: '';
       position: absolute;
@@ -355,7 +378,7 @@
 <!-- ① Phaser 3 -->
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 
-<!-- 데이터 파일 추가, 추후 인덱스 파일 수정 시 양식에 맞게 2번으로 변경 -->
+<!-- 데이터 파일 -->
 <script src="Games/Codes/Datas/CharacterNames.js"></script>
 <script src="Games/Codes/Datas/JobData.js"></script>
 <script src="Games/Codes/Datas/PositionData.js"></script>
@@ -411,7 +434,7 @@
 <script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Recruits/Recruit_Name.js"></script>
 <script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Recruits/Recruit_Popup.js"></script>
 
-<!-- Tab_Squad (탐사대 탭) — 껍데기 먼저, 하위 파일 순서 엄수 -->
+<!-- Tab_Squad (탐사대 탭) -->
 <script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Squad.js"></script>
 <script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Squads/Tab_Squad_Grid.js"></script>
 <script src="Games/Codes/Scenes/Ateliers/Tabs/Tab_Squads/Tab_Squad_Drag.js"></script>

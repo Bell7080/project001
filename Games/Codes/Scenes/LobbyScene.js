@@ -4,10 +4,22 @@
 //
 //  역할: NEURAL RUST 메인 타이틀 / 로비 화면
 //  의존: FontManager, SaveManager, AudioManager, utils.js
+//
+//  배경 전략 (방식 2 — 배경만 늘리기):
+//    - Background_002.png 를 화면 전체에 ENVELOP(cover) 방식으로 배치
+//    - 21:9 등 와이드 화면에서도 배경이 잘리지 않고 꽉 참
+//    - UI 요소는 W/H 비율 기반이므로 중앙 정렬 그대로 유지
 // ================================================================
 
 class LobbyScene extends Phaser.Scene {
   constructor() { super({ key: 'LobbyScene' }); }
+
+  preload() {
+    // 로비 배경 이미지
+    if (!this.textures.exists('bg_lobby')) {
+      this.load.image('bg_lobby', 'Games/Assets/Sprites/Background_002.png');
+    }
+  }
 
   create() {
     const W  = this.scale.width;
@@ -22,29 +34,40 @@ class LobbyScene extends Phaser.Scene {
     this._buildFooter(W, H);
   }
 
+  // ── 배경 ──────────────────────────────────────────────────────
+  // 레이어 순서 (아래 → 위):
+  //   ① 검은 베이스 사각형 (이미지 로드 실패 시 fallback)
+  //   ② 배경 이미지 — ENVELOP(cover): 비율 유지하며 화면을 꽉 채움
+  //   ③ 어두운 오버레이 — 이미지 위에 UI 가독성 확보
+  //   ④ 스캔라인 — 미세한 수평선 노이즈
+  //   ⑤ 장식 요소 (수평선 / 코너)
   _buildBackground(W, H, cx) {
+    // ① 검은 베이스
     this.add.rectangle(0, 0, W, H, 0x050407).setOrigin(0);
 
-    const scan = this.add.graphics();
+    // ② 배경 이미지 — ENVELOP(cover) 방식
+    if (this.textures.exists('bg_lobby')) {
+      const bg = this.add.image(cx, H / 2, 'bg_lobby');
+
+      // 화면을 완전히 덮는 최소 스케일 계산 (CSS background-size: cover 와 동일)
+      const scaleX = W / bg.width;
+      const scaleY = H / bg.height;
+      const cover  = Math.max(scaleX, scaleY);
+      bg.setScale(cover).setDepth(0);
+    }
+
+    // ③ 어두운 반투명 오버레이 — 이미지가 너무 밝으면 UI가 묻히므로 필요
+    this.add.rectangle(0, 0, W, H, 0x050407, 0.52).setOrigin(0).setDepth(1);
+
+    // ④ 스캔라인 (수평 미세 노이즈)
+    const scan = this.add.graphics().setDepth(2);
     for (let y = 0; y < H; y += 4) {
-      scan.lineStyle(1, 0x1a0e06, 0.25);
+      scan.lineStyle(1, 0x000000, 0.18);
       scan.lineBetween(0, y, W, y);
     }
 
-    const grid = this.add.graphics();
-    const step = Math.round(W / 56);
-    for (let x = 0; x <= W; x += step) {
-      grid.lineStyle(1, 0x0f0a05, 0.7);
-      grid.lineBetween(x, 0, x, H);
-    }
-    for (let y = 0; y <= H; y += step) {
-      grid.lineStyle(1, 0x0f0a05, 0.7);
-      grid.lineBetween(0, y, W, y);
-    }
-
-    // ── 원형 글로우 제거 (삭제됨) ──
-
-    const deco = this.add.graphics();
+    // ⑤-A 수평 데코 선 (하단 1/4 지점)
+    const deco  = this.add.graphics().setDepth(2);
     const lineY = H * 0.78;
     deco.lineStyle(1, 0x2a1a0a, 1);
     deco.lineBetween(W * 0.03, lineY,     W * 0.40, lineY);
@@ -53,21 +76,23 @@ class LobbyScene extends Phaser.Scene {
     deco.lineBetween(W * 0.03, lineY + 3, W * 0.40, lineY + 3);
     deco.lineBetween(W * 0.60, lineY + 3, W * 0.97, lineY + 3);
 
-    const corner = this.add.graphics();
+    // ⑤-B 코너 장식
+    const corner = this.add.graphics().setDepth(2);
     corner.lineStyle(1, 0x2a1a0a, 0.8);
     const cs = Math.round(W * 0.025);
     const px = Math.round(W * 0.025);
     const py = Math.round(H * 0.035);
-    corner.lineBetween(px, py, px + cs, py);
-    corner.lineBetween(px, py, px, py + cs);
-    corner.lineBetween(W - px, py, W - px - cs, py);
-    corner.lineBetween(W - px, py, W - px, py + cs);
-    corner.lineBetween(px, H - py, px + cs, H - py);
-    corner.lineBetween(px, H - py, px, H - py - cs);
+    corner.lineBetween(px,     py,     px + cs, py    );
+    corner.lineBetween(px,     py,     px,      py + cs);
+    corner.lineBetween(W - px, py,     W - px - cs, py);
+    corner.lineBetween(W - px, py,     W - px, py + cs);
+    corner.lineBetween(px,     H - py, px + cs, H - py);
+    corner.lineBetween(px,     H - py, px,      H - py - cs);
     corner.lineBetween(W - px, H - py, W - px - cs, H - py);
-    corner.lineBetween(W - px, H - py, W - px, H - py - cs);
+    corner.lineBetween(W - px, H - py, W - px,      H - py - cs);
   }
 
+  // ── 타이틀 ────────────────────────────────────────────────────
   _buildTitle(W, H, cx) {
     const SX     = 0.75;
     const SY     = 1.30;
@@ -79,7 +104,7 @@ class LobbyScene extends Phaser.Scene {
       fill: '#5a3d1a',
       fontFamily: FontManager.MONO,
       letterSpacing: 3,
-    }).setOrigin(0.5).setAlpha(0);
+    }).setOrigin(0.5).setAlpha(0).setDepth(3);
 
     const glow1 = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
@@ -87,7 +112,7 @@ class LobbyScene extends Phaser.Scene {
       fontFamily: FontManager.TITLE,
       stroke: '#7a3010',
       strokeThickness: 26,
-    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(3);
 
     const glow2 = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
@@ -95,7 +120,7 @@ class LobbyScene extends Phaser.Scene {
       fontFamily: FontManager.TITLE,
       stroke: '#8a4010',
       strokeThickness: 12,
-    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(3);
 
     const outline = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
@@ -103,7 +128,7 @@ class LobbyScene extends Phaser.Scene {
       fontFamily: FontManager.TITLE,
       stroke: '#7a4015',
       strokeThickness: 4,
-    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(3);
 
     const title = this.add.text(cx, titleY, 'NEURAL  RUST', {
       fontSize: FS,
@@ -111,21 +136,21 @@ class LobbyScene extends Phaser.Scene {
       fontFamily: FontManager.TITLE,
       stroke: '#2a1408',
       strokeThickness: 1,
-    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY);
+    }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(3);
 
     const subKo = this.add.text(cx, H * 0.48, '뉴  럴  러  스  트', {
       fontSize: scaledFontSize(19, this.scale),
       fill: '#6b4a28',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
-    }).setOrigin(0.5).setAlpha(0);
+    }).setOrigin(0.5).setAlpha(0).setDepth(3);
 
     const tagline = this.add.text(cx, H * 0.54, '녹 슨  닻 으 로  전 선 을  끊 어 내 라 .', {
       fontSize: scaledFontSize(14, this.scale),
       fill: '#4a3018',
       fontFamily: FontManager.MONO,
       letterSpacing: 1,
-    }).setOrigin(0.5).setAlpha(0);
+    }).setOrigin(0.5).setAlpha(0).setDepth(3);
 
     this.tweens.add({ targets: label,   alpha: 1,    duration: 900,  delay: 300,  ease: 'Sine.easeOut' });
     this.tweens.add({ targets: glow1,   alpha: 0.12, duration: 1800, delay: 400,  ease: 'Sine.easeOut' });
@@ -149,30 +174,27 @@ class LobbyScene extends Phaser.Scene {
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(9);
 
     const fireGlitch = () => {
-      // 효과음 재생 (나중에 에셋 추가 시 자동 적용)
       AudioManager.playSFX('glitch_title');
 
-      // 오렌지: 깜짝 등장 → x 이동 → 사라짐
       glitchOrange.setAlpha(0.6).setX(cx - 4);
-      this.time.delayedCall(45, () => { glitchOrange.setX(cx + 5); });
-      this.time.delayedCall(95, () => { glitchOrange.setX(cx - 2); });
+      this.time.delayedCall(45,  () => { glitchOrange.setX(cx + 5); });
+      this.time.delayedCall(95,  () => { glitchOrange.setX(cx - 2); });
       this.time.delayedCall(130, () => { glitchOrange.setAlpha(0).setX(cx); });
 
-      // 블루: 30ms 뒤 반대 방향
       this.time.delayedCall(30, () => {
         glitchBlue.setAlpha(0.35).setX(cx + 6);
-        this.time.delayedCall(55, () => { glitchBlue.setX(cx - 3); });
+        this.time.delayedCall(55,  () => { glitchBlue.setX(cx - 3); });
         this.time.delayedCall(110, () => { glitchBlue.setAlpha(0).setX(cx); });
       });
     };
 
-    // 0.8s 후 첫 발화, 이후 4.8s 마다 반복
     this.time.delayedCall(800, () => {
       fireGlitch();
       this.time.addEvent({ delay: 3000, loop: true, callback: fireGlitch });
     });
   }
 
+  // ── 메뉴 ──────────────────────────────────────────────────────
   _buildMenu(W, H) {
     const hasSave = SaveManager.hasSave();
     const x     = W * 0.07;
@@ -204,40 +226,31 @@ class LobbyScene extends Phaser.Scene {
       fontSize: scaledFontSize(17, this.scale),
       fill: '#4a2a10',
       fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0.5).setAlpha(0);
+    }).setOrigin(0, 0.5).setAlpha(0).setDepth(3);
 
     const btn = this.add.text(x, y, label, {
       fontSize: scaledFontSize(24, this.scale),
       fill: '#7a5530',
       fontFamily: FontManager.TITLE,
-    }).setOrigin(0, 0.5).setAlpha(0).setInteractive({ useHandCursor: true });
+    }).setOrigin(0, 0.5).setAlpha(0).setInteractive({ useHandCursor: true }).setDepth(3);
 
-    const underline = this.add.graphics().setAlpha(0);
-
-    this.tweens.add({ targets: [btn, marker, underline], alpha: 1, duration: 500, delay, ease: 'Sine.easeOut' });
+    this.tweens.add({ targets: [btn, marker], alpha: 1, duration: 500, delay, ease: 'Sine.easeOut' });
 
     const origX = x;
     const shift = parseInt(scaledFontSize(8, this.scale));
 
     btn.on('pointerover', () => {
+      this.tweens.killTweensOf(btn);
       this.tweens.add({ targets: btn, x: origX + shift, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#e8c090' });
       marker.setStyle({ fill: '#c06020' });
-      underline.clear();
-      underline.lineStyle(1, 0x8b4010, 0.9);
-      underline.lineBetween(
-        x, y + parseInt(scaledFontSize(16, this.scale)),
-        x + btn.width + shift + 4, y + parseInt(scaledFontSize(16, this.scale))
-      );
     });
-
     btn.on('pointerout', () => {
+      this.tweens.killTweensOf(btn);
       this.tweens.add({ targets: btn, x: origX, duration: 100, ease: 'Sine.easeOut' });
       btn.setStyle({ fill: '#7a5530' });
       marker.setStyle({ fill: '#4a2a10' });
-      underline.clear();
     });
-
     btn.on('pointerdown', () => this._onMenuClick(key));
   }
 
@@ -246,7 +259,7 @@ class LobbyScene extends Phaser.Scene {
       case 'new':
         SaveManager.deleteSave();
         SaveManager.deleteStory();
-        SaveManager.newGame();          // arc: 999999 (테스트용) + 영입 가격 초기화
+        SaveManager.newGame();
         SaveManager.setProgress(1, 'start');
         this._transition(() => this.scene.start('LoadingScene', { next: 'AtelierScene' }));
         break;
@@ -275,17 +288,18 @@ class LobbyScene extends Phaser.Scene {
     });
   }
 
+  // ── 푸터 ──────────────────────────────────────────────────────
   _buildFooter(W, H) {
     this.add.text(W - 14, H - 12, 'v0.0.1  prototype', {
       fontSize: scaledFontSize(12, this.scale),
       fill: '#3a2510',
       fontFamily: FontManager.MONO,
-    }).setOrigin(1, 1);
+    }).setOrigin(1, 1).setDepth(3);
 
     this.add.text(14, H - 12, 'YEAR 102  ·  POST-COLLAPSE', {
       fontSize: scaledFontSize(12, this.scale),
       fill: '#3a2510',
       fontFamily: FontManager.MONO,
-    }).setOrigin(0, 1);
+    }).setOrigin(0, 1).setDepth(3);
   }
 }

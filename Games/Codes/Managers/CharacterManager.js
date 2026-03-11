@@ -289,49 +289,48 @@ const CharacterManager = (() => {
         '전열 전체 타격','후열 타격','전/후열 동시 타격','전체 칸 타격',
       ];
 
-      // ⚠️ 테스트용 오버클럭 풀 (Recruit_Data.js OVERCLOCK_POOL과 동기)
-      const TEST_OC_POOL = [
-        { id:'oc_attack',  name:'분노 회로',   label:'⚡ 오버클럭 : 공격', description:'공격 스탯이 50% 증가합니다.', statKey:'attack',  statIdx:2, bonus:0.50, color:'#ff3333' },
-        { id:'oc_hp',      name:'강화 외피',   label:'⚡ 오버클럭 : 체력', description:'체력 스탯이 50% 증가합니다.', statKey:'hp',      statIdx:0, bonus:0.50, color:'#ff88bb' },
-        { id:'oc_health',  name:'자가 수복',   label:'⚡ 오버클럭 : 건강', description:'건강 스탯이 50% 증가합니다.', statKey:'health',  statIdx:1, bonus:0.50, color:'#ff4466' },
-        { id:'oc_agility', name:'가속 구동계', label:'⚡ 오버클럭 : 민첩', description:'민첩 스탯이 50% 증가합니다.', statKey:'agility', statIdx:3, bonus:0.50, color:'#55ccff' },
-        { id:'oc_luck',    name:'행운 코어',   label:'⚡ 오버클럭 : 행운', description:'행운 스탯이 50% 증가합니다.', statKey:'luck',    statIdx:4, bonus:0.50, color:'#88ff88' },
-      ];
-
       ex.forEach(c => {
+        // 스프라이트 키 유효성
         const idx = parseInt((c.spriteKey||'').replace('char_',''), 10);
         if (!c.spriteKey || isNaN(idx) || idx >= SPRITE_COUNT)
           { c.spriteKey = _randSpriteKey(); dirty = true; }
+
+        // 직업 라벨 동기
         const fl = _getJobLabel(c.job);
-        if (c.jobLabel !== fl)              { c.jobLabel = fl; dirty = true; }
+        if (c.jobLabel !== fl) { c.jobLabel = fl; dirty = true; }
+
+        // Cog 재계산
         const fc = calcCog(c.statSum || 0);
-        if (c.cog !== fc)                   { c.cog = fc;      dirty = true; }
+        if (c.cog !== fc)      { c.cog = fc;      dirty = true; }
+
+        // position 누락 보정
         if (!c.position)
           { c.position = _pick(_getPositionPool(c.cog)); dirty = true; }
-        // 테스트: overclock이 아직 null이면 50% 확률로 랜덤 부여
-        if (c.overclock === undefined || c.overclock === null) {
-          c.overclock = Math.random() < 0.50
-            ? TEST_OC_POOL[Math.floor(Math.random() * TEST_OC_POOL.length)]
-            : null;
+
+        // overclock 필드 누락 보정 (undefined → null)
+        // OVERCLOCK_POOL은 Recruit_Data.js에서 전역으로 정의됨
+        if (c.overclock === undefined) {
+          c.overclock = null;
           dirty = true;
         }
-        if (oldPosNames.includes(c.passive))
-          { if (!c.position) c.position = c.passive;
-            c.passive = _pick(_getPassivePool(c.cog)); dirty = true; }
-        if (c.mastery === undefined) { c.mastery = 0; dirty = true; }
+
+        // 구버전 passive(포지션명) → position 으로 이관
+        if (oldPosNames.includes(c.passive)) {
+          if (!c.position) c.position = c.passive;
+          c.passive = _pick(_getPassivePool(c.cog));
+          dirty = true;
+        }
+
+        // mastery / pendingStats 누락 보정
+        if (c.mastery      === undefined) { c.mastery      = 0; dirty = true; }
         if (c.pendingStats === undefined) { c.pendingStats = 0; dirty = true; }
-        // 테스트: mastery가 0이면 50% 확률로 1~40 부여 (잔여스탯도 같이)
-        if (c.mastery === 0 && Math.random() < 0.50) {
-          const lv = 1 + Math.floor(Math.random() * 40);
-          c.mastery = lv;
-          c.pendingStats = lv;   // 전부 미배분 상태로
-          dirty = true;
-        }
       });
+
       if (dirty) saveAll(ex);
       return ex;
     }
 
+    // 저장 데이터 없음 — 초기 캐릭터 생성
     const chars = [];
     const sj = ['fisher','diver','ai'];
     for (let cog = 1; cog <= 10; cog++)
