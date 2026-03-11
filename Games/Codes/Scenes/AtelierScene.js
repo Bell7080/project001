@@ -115,7 +115,7 @@ class AtelierScene extends Phaser.Scene {
 
     const W = this.W, H = this.H;
     const TabMap = {
-      explore: Tab_Explore, recruit: Tab_Recruit, manage: Tab_Manage_Full, squad: Tab_Squad,
+      explore: Tab_Explore, recruit: Tab_Recruit, manage: Tab_Manage_Full,
       facility: Tab_Facility, outsource: Tab_Outsource, dredge: Tab_Dredge,
       shop: Tab_Shop, storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
     };
@@ -199,7 +199,6 @@ class AtelierScene extends Phaser.Scene {
     const rightItems = [
       { key: 'recruit',   label: '영  입'   },
       { key: 'manage',    label: '관  리'   },
-      { key: 'squad',     label: '탐 사 대' },
       { key: 'facility',  label: '시  설'   },
       { key: 'outsource', label: '외  주'   },
       { key: 'dredge',    label: '드 레 지' },
@@ -505,7 +504,7 @@ class AtelierScene extends Phaser.Scene {
 
       // 복귀 탭 인스턴스 생성
       const TabMap = {
-        explore: Tab_Explore, recruit: Tab_Recruit, squad: Tab_Squad,
+        explore: Tab_Explore, recruit: Tab_Recruit,
         facility: Tab_Facility, outsource: Tab_Outsource, dredge: Tab_Dredge,
         shop: Tab_Shop, storage: Tab_Storage, codex: Tab_Codex, memory: Tab_Memory,
       };

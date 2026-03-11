@@ -100,21 +100,36 @@ const CharacterManager = (() => {
     9:['절대 의지','반격 본능'],    10:['절대 의지','코어 공명'],
   };
 
-  const SKILL_POOL = {
-    1:['기본 일격','빠른 찌르기'],    2:['연속 타격','방어 자세'],
-    3:['강타','회피 기동'],          4:['독 도포','광역 타격'],
-    5:['강화 독','순간 가속'],       6:['폭발 타격','전방 스캔'],
-    7:['철갑 관통','심해 압박'],     8:['전기 충격','철벽 방어'],
-    9:['코어 오버로드','심연의 포효'],10:['코어 오버로드','심연의 포효'],
-  };
+  // SKILL_POOL — Data_Skills.js 의 id 기반으로 교체
+  // Data_Skills.js 가 로드되지 않은 경우를 위한 폴백 포함
+  const SKILL_POOL = (() => {
+    if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
+      // Data_Skills.js 배열 형식 — id 기반으로 Cog별 풀 생성
+      const pool = {};
+      for (let cog = 1; cog <= 10; cog++) pool[cog] = [];
+      SKILL_DATA.forEach(s => {
+        for (let cog = s.cogMin; cog <= 10; cog++) pool[cog].push(s.id);
+      });
+      return pool;
+    }
+    // 폴백: 기존 이름 기반 풀
+    return {
+      1:['기본 일격','빠른 찌르기'],    2:['연속 타격','방어 자세'],
+      3:['강타','회피 기동'],          4:['독 도포','광역 타격'],
+      5:['강화 독','순간 가속'],       6:['폭발 타격','전방 스캔'],
+      7:['철갑 관통','심해 압박'],     8:['전기 충격','철벽 방어'],
+      9:['코어 오버로드','심연의 포효'],10:['코어 오버로드','심연의 포효'],
+    };
+  })();
 
   function _getPositionPool(cog) {
     const p = (typeof POSITION_POOL !== 'undefined') ? POSITION_POOL : _POSITION_POOL_FALLBACK;
     return p[cog] || p[1];
   }
   function _getPassivePool(cog) {
-    const p = (typeof PASSIVE_POOL !== 'undefined') ? PASSIVE_POOL : _PASSIVE_POOL_FALLBACK;
-    return p[cog] || p[1];
+    // Data_Passives.js 의 PASSIVE_POOL 우선 참조, 없으면 기존 폴백
+    if (typeof PASSIVE_POOL !== 'undefined') return PASSIVE_POOL[cog] || PASSIVE_POOL[1];
+    return _PASSIVE_POOL_FALLBACK[cog] || _PASSIVE_POOL_FALLBACK[1];
   }
 
   function _validatePools() {
@@ -341,7 +356,8 @@ const CharacterManager = (() => {
     return chars;
   }
 
-  // ── 스쿼드 ───────────────────────────────────────────────────────
+  // ── 스쿼드 (폐기 — 탐사대 탭 삭제됨) ────────────────────────────
+  // 하위호환을 위해 남겨두되 신규 코드에서는 사용하지 않는다.
   function loadSquad() {
     try {
       const r = localStorage.getItem(SQUAD_KEY);
@@ -363,13 +379,84 @@ const CharacterManager = (() => {
     ));
   }
 
+  // ── 파티 (신규 — 탐사 진입 전 파티 편성) ─────────────────────────
+  const PARTY_KEY = 'nr_party';
+
+  function saveParty(charIds) {
+    localStorage.setItem(PARTY_KEY, JSON.stringify(charIds || []));
+  }
+
+  function loadParty() {
+    try {
+      const r = localStorage.getItem(PARTY_KEY);
+      return r ? JSON.parse(r) : [];
+    } catch { return []; }
+  }
+
+  // ── 기록칩 (신규 — 얼굴 ID별 영구 누적) ─────────────────────────
+  const RECORD_KEY = 'nr_record_chips';
+
+  function loadRecordChips() {
+    try {
+      const r = localStorage.getItem(RECORD_KEY);
+      return r ? JSON.parse(r) : {};
+    } catch { return {}; }
+  }
+
+  function getRecordChip(spriteKey) {
+    return loadRecordChips()[spriteKey] || null;
+  }
+
+  function updateRecordChip(spriteKey, delta) {
+    const chips = loadRecordChips();
+    if (!chips[spriteKey]) chips[spriteKey] = {
+      expeditions:0, kills:0, deaths:0,
+      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
+    };
+    const c = chips[spriteKey];
+    if (delta.expeditions)   c.expeditions += delta.expeditions;
+    if (delta.kills)         c.kills       += delta.kills;
+    if (delta.highestRegion && delta.highestRegion > c.highestRegion)
+      c.highestRegion = delta.highestRegion;
+    if (delta.highestCog && delta.highestCog > c.highestCog)
+      c.highestCog = delta.highestCog;
+    if (c.expeditions >= 10 && !c.veteran) c.veteran = true;
+    localStorage.setItem(RECORD_KEY, JSON.stringify(chips));
+    return c;
+  }
+
+  function recordDeath(spriteKey, { day, cog, round, killedBy }) {
+    const chips = loadRecordChips();
+    if (!chips[spriteKey]) chips[spriteKey] = {
+      expeditions:0, kills:0, deaths:0,
+      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
+    };
+    const c = chips[spriteKey];
+    c.deaths += 1;
+    c.deathLog.unshift({ death: c.deaths, day, cog, round, killedBy });
+    localStorage.setItem(RECORD_KEY, JSON.stringify(chips));
+    return c;
+  }
+
+  function recordFirstDay(spriteKey, day) {
+    const chips = loadRecordChips();
+    if (!chips[spriteKey]) chips[spriteKey] = {
+      expeditions:0, kills:0, deaths:0,
+      highestRegion:'', highestCog:0, veteran:false, firstDay:0, deathLog:[],
+    };
+    if (!chips[spriteKey].firstDay) chips[spriteKey].firstDay = day;
+    localStorage.setItem(RECORD_KEY, JSON.stringify(chips));
+  }
+
   // ── 공개 API ─────────────────────────────────────────────────────
   return {
     initIfEmpty,
     loadAll, saveAll,
     createCharacter, createCharacterOfCog,
     addCharacter, removeCharacter, updateCharacter,
-    loadSquad, saveSquad,
+    loadSquad, saveSquad,          // 폐기 예정 — 하위호환용
+    saveParty, loadParty,
+    getRecordChip, updateRecordChip, recordDeath, recordFirstDay,
     calcCog, getCogColor, COG_COLORS,
     SKILL_POOL, JOB_LABEL,
     STAT_COLORS, STAT_LABEL_MAP,
