@@ -1,25 +1,13 @@
 // ================================================================
 //  TM_Layout.js
-//  경로: Games/Codes/Scenes/Atelier/tabs/Tab_Manages/TM_Layout.js
+//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Manages/TM_Layout.js
 //
-//  역할: 배경(BG_002 풀스크린) / 헤더 / 구분선 / 돌아가기 버튼
-//
-//  ✏️ 버그 수정:
-//    - buildBackground: 비동기 applyBg 시 addAt 인덱스 충돌 수정
-//      → _bgPlaceholder 를 index 1 자리에 미리 추가 → 비동기 완료 시 정확한 자리에 삽입
-//      → 다른 패널(header/list/right)이 이미 자식 목록에 쌓인 후 addAt(img,1)을 호출하면
-//         모든 자식이 뒤로 밀려 패널들이 배경 아래로 사라지던 버그 수정
-//    - buildBackBtn: btn.setDepth(500) 완전 제거
-//      → 컨테이너 자식 객체에 setDepth 혼용 시 씬 depth 기준으로 렌더되어
-//         다른 UI와 depth 충돌 발생 → depth는 _container 레벨에서만 관리
-//    - buildBackBtn: pointerdown+pointerup 이중 등록 → pointerdown 단독으로 변경
-//      (pointerdown에서 즉시 onBack 호출, _backCalled 플래그 불필요)
-//    - ulG: _backBtn 컨테이너에 완전히 종속 → setVisible/destroy 시 함께 제어
+//  역할: 배경(BG_004 풀스크린) / 헤더 / 구분선 / 돌아가기 버튼
 // ================================================================
 
 const TM_Layout = {
 
-  // ── 전체 배경 + Background_002 풀스크린 페이드 ──────────────
+  // ── 전체 배경 + Background_004 풀스크린 페이드 ──────────────
   buildBackground(tab, fs) {
     const { scene, W, H } = tab;
 
@@ -29,14 +17,13 @@ const TM_Layout = {
     base.fillRect(0, 0, W, H);
     tab._container.add(base);
 
-    // ── index 1: BG_002 자리 플레이스홀더 ───────────────────
-    // 비동기 로드 완료 시 이 인덱스에 img를 삽입 → 이후 추가된 자식들이 밀리지 않음
-    const placeholder = scene.add.graphics(); // 빈 그래픽 (화면에 안 보임)
+    // ── index 1: BG_004 자리 플레이스홀더 ───────────────────
+    const placeholder = scene.add.graphics();
     tab._bgPlaceholder = placeholder;
-    tab._container.add(placeholder); // 항상 index 1
+    tab._container.add(placeholder);
 
-    const BG_KEY  = 'manage_bg_002';
-    const BG_PATH = 'Games/Assets/Sprites/Background_002.png';
+    const BG_KEY  = 'manage_bg_004';
+    const BG_PATH = 'Games/Assets/Sprites/Background_004.png';
 
     const applyBg = () => {
       if (!tab._container || !tab._container.scene) return;
@@ -49,19 +36,16 @@ const TM_Layout = {
       ov.fillStyle(0x000000, 0.20);
       ov.fillRect(0, 0, W, H);
 
-      // 플레이스홀더 위치를 확인하고 그 자리에 img/ov 삽입
       const idx = tab._bgPlaceholder
         ? tab._container.getIndex(tab._bgPlaceholder)
         : -1;
 
       if (idx !== -1) {
-        // 플레이스홀더 먼저 제거 후 같은 자리에 img → ov 순 삽입
         tab._bgPlaceholder.destroy();
         tab._bgPlaceholder = null;
         tab._container.addAt(img, idx);
         tab._container.addAt(ov,  idx + 1);
       } else {
-        // 이미 placeholder 없으면 맨 앞에 삽입 (안전 폴백)
         tab._container.addAt(ov,  1);
         tab._container.addAt(img, 1);
       }
@@ -141,9 +125,6 @@ const TM_Layout = {
       );
     };
 
-    // ✏️ 돌아가기 버튼 hit 박스도 씬 직접 추가
-    //    컨테이너(_backBtn)가 tween으로 x/y 이동하면 Text.setInteractive 영역이 갱신 안 됨
-    //    → 씬 레벨 Rectangle로 분리, depth 20 부여
     const btnW = parseInt(fs(26)) * 6;
     const btnH = parseInt(fs(30));
     const hit  = scene.add.rectangle(origX + btnW / 2, btnY, btnW, btnH, 0, 0)
@@ -167,7 +148,6 @@ const TM_Layout = {
       if (tab.onBack) tab.onBack();
     });
 
-    // hit은 _detailObjs로 추적 (destroy 시 정리)
     tab._detailObjs.push(hit);
 
     tab._backBtn.add([marker, btn, ulG]);

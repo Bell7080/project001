@@ -1,17 +1,13 @@
 // ================================================================
 //  TM_RightPanel.js
-//  경로: Games/Codes/Scenes/Atelier/tabs/Tab_Manages/TM_RightPanel.js
+//  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Manages/TM_RightPanel.js
 //
 //  역할: 우측 패널 — 이름/숙련도/직업/오버클럭/HP/Cog/스탯/스킬탭/회복
-//        스킬탭(POSITION·PASSIVE·SKILL)은 스탯 아래에 일렬로 배치
 //
-//  ✏️ 버그 수정:
-//    - hHit, tipHit, statHit, pH 의 setDepth(602/603) 전부 제거
-//      → 컨테이너(_rightPanel) 자식 객체에 setDepth 적용 시 씬 depth 기준으로 동작하여
-//         다른 UI(사이드버튼 등, depth 0)와 클릭 이벤트 충돌 → 버튼 클릭 불가 버그 발생
-//      → depth 는 _container(Tab_Manage_Full) 레벨에서만 관리하도록 통일
-//    - 툴팁 bgObj/txtObj 도 addR 로 _rightPanel 에 추가 → tab destroy 시 함께 제거됨
-//    - _burst 파티클의 setDepth(603) 도 제거 (컨테이너가 충분히 위에 있으면 불필요)
+//  수정:
+//    - _buildStats 시그니처에 addHit 추가 (ReferenceError 수정)
+//    - _buildStats 호출부에 addHit 전달
+//    - _buildAbilRow 호출부에 addHit 전달
 // ================================================================
 
 const TM_RightPanel = {
@@ -22,7 +18,7 @@ const TM_RightPanel = {
     const pm = tab._panelMargin || 0;
     tab._rightPanel = scene.add.container(0, 0);
 
-    const rx = tab._listW + tab._centerW;
+    const rx  = tab._listW + tab._centerW;
     const rBg = scene.add.graphics();
     rBg.fillStyle(0x050810, 0.88);
     rBg.lineStyle(1, 0x2a1a08, 0.4);
@@ -35,7 +31,6 @@ const TM_RightPanel = {
 
   // ── 선택된 캐릭터 우측 디테일 ────────────────────────────────
   buildDetail(tab, char) {
-    // 이전 디테일 파기
     if (tab._rightDetailObjs) {
       tab._rightDetailObjs.forEach(o => { try { o.destroy(); } catch(e){} });
     }
@@ -60,11 +55,7 @@ const TM_RightPanel = {
       ? CharacterManager.STAT_COLORS
       : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
 
-    // ✏️ addR: _rightPanel 컨테이너에 추가 + _rightDetailObjs에 추적
-    //    → tab.destroy() 또는 _rightPanel.setVisible(false) 시 함께 제어
-    const addR = (obj) => { tab._rightPanel.add(obj); tab._rightDetailObjs.push(obj); return obj; };
-    // ✏️ addHit: 인터랙티브 히트박스는 씬에 직접 추가
-    //    Phaser 컨테이너 안 setInteractive는 씬 절대좌표와 어긋나 클릭 불가
+    const addR   = (obj) => { tab._rightPanel.add(obj); tab._rightDetailObjs.push(obj); return obj; };
     const addHit = (obj) => { obj.setDepth(20); tab._rightDetailObjs.push(obj); return obj; };
 
     // ── 툴팁 ────────────────────────────────────────────────
@@ -72,7 +63,6 @@ const TM_RightPanel = {
     const _showTip = (x, y, text) => {
       _hideTip();
       const tpad = 10, maxW = parseInt(fs(200));
-      // ✏️ 툴팁 텍스트/배경도 addR 로 컨테이너에 추가 → 탭 전환 시 잔존 방지
       const txtObj = addR(scene.add.text(0, 0, text, {
         fontSize: fs(11), fill: '#f0e0b0', fontFamily: FontManager.MONO, wordWrap: { width: maxW },
       }));
@@ -108,7 +98,6 @@ const TM_RightPanel = {
     };
     const _hideTip = () => {
       if (_tip) {
-        // _rightDetailObjs 에서도 제거
         const rmv = (o) => {
           try { o.destroy(); } catch(e) {}
           const i = tab._rightDetailObjs.indexOf(o);
@@ -152,7 +141,7 @@ const TM_RightPanel = {
       const ocBg   = scene.add.graphics();
       const ocHex  = parseInt((char.overclock.color || '#ff4400').replace('#', '0x'));
       ocBg.fillStyle(0x0c0608, 0.9);
-      [{pad:4,a:0.06},{pad:2,a:0.14},{pad:1,a:0.28}].forEach(({pad:p,a})=>{
+      [{pad:4,a:0.06},{pad:2,a:0.14},{pad:1,a:0.28}].forEach(({pad:p,a}) => {
         ocBg.lineStyle(1, ocHex, a);
         ocBg.strokeRect(colX - p, curY - p, colW + p*2, ocBanH + p*2);
       });
@@ -201,14 +190,16 @@ const TM_RightPanel = {
     curY += cogBarH + parseInt(fs(8));
 
     // ── 스탯 블록 ────────────────────────────────────────────
+    // ✏️ addHit 추가 전달
     curY = TM_RightPanel._buildStats(
-      tab, char, addR, _showTip, _moveTip, _hideTip, _persistTweens,
+      tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens,
       SC, fs, colX, colW, curY, ry, rh, rpad
     );
 
     // ── 어빌리티 (스탯 아래 일렬) ───────────────────────────
+    // ✏️ addHit 추가 전달
     TM_RightPanel._buildAbilRow(
-      tab, char, addR, _showTip, _moveTip, _hideTip, fs, colX, colW, curY
+      tab, char, addR, addHit, _showTip, _moveTip, _hideTip, fs, colX, colW, curY
     );
 
     // ── 회복 버튼 ────────────────────────────────────────────
@@ -232,15 +223,13 @@ const TM_RightPanel = {
           fontSize: fs(9), fill: '#6a9060', fontFamily: FontManager.MONO,
         }).setOrigin(0.5);
 
-      // ✏️ setDepth(602) 제거 — _rightPanel 컨테이너에 addR 로 추가
-      //    depth 는 Tab_Manage_Full._container 에서 관리
       const hHit = scene.add.rectangle(
         colX + colW / 2, btnY + btnH / 2, colW, btnH, 0, 0
       ).setInteractive({ useHandCursor: true });
 
-      hHit.on('pointerover',  () => dH(true));
-      hHit.on('pointerout',   () => dH(false));
-      hHit.on('pointerup',    () => tab._doHeal(char, healCost));
+      hHit.on('pointerover', () => dH(true));
+      hHit.on('pointerout',  () => dH(false));
+      hHit.on('pointerup',   () => tab._doHeal(char, healCost));
 
       addR(hBg);
       addR(hTxt);
@@ -251,7 +240,8 @@ const TM_RightPanel = {
   },
 
   // ── 스탯 블록 ────────────────────────────────────────────────
-  _buildStats(tab, char, addR, _showTip, _moveTip, _hideTip, _persistTweens, SC, fs, colX, colW, curY, ry, rh, rpad) {
+  // ✏️ addHit 시그니처에 추가 (ReferenceError 수정)
+  _buildStats(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens, SC, fs, colX, colW, curY, ry, rh, rpad) {
     const { scene } = tab;
     const pendingStats = char.pendingStats || 0;
     const ocKey  = char.overclock ? char.overclock.statKey : null;
@@ -286,7 +276,6 @@ const TM_RightPanel = {
     const _valTxts     = {};
     let _pendingTxt    = null;
 
-    // ✏️ _burst 파티클: setDepth(603) 제거 → 씬에 직접 추가 (단명 이펙트이므로 무관)
     const _burst = (x, y, color) => {
       const hc = parseInt(color.replace('#', '0x'));
       for (let k = 0; k < 8; k++) {
@@ -352,24 +341,23 @@ const TM_RightPanel = {
         ? `${tip}\n\n[ ${char.overclock.name} ]\n${char.overclock.description}`
         : tip;
 
-      // ✏️ setDepth(602) 제거 — _rightPanel 컨테이너 자식으로 addR
       const statHit = scene.add.rectangle(
         colX + colW / 2, midY,
         colW - (pendingStats > 0 ? plusW + 4 : 0), rowH,
         0, 0
       ).setInteractive({ useHandCursor: false });
 
-      statHit.on('pointerover',  (ptr) => _showTip(ptr.x, ptr.y, tipText));
-      statHit.on('pointermove',  (ptr) => _moveTip(ptr.x, ptr.y));
-      statHit.on('pointerout',   ()    => _hideTip());
+      statHit.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, tipText));
+      statHit.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
+      statHit.on('pointerout',  ()    => _hideTip());
 
       addR(statT);
       addR(valT);
       addHit(statHit);
 
       // ── + 버튼 ────────────────────────────────────────────
-      const btnX   = colX + colW - plusW / 2 - 3;
-      const plusBg = scene.add.graphics();
+      const btnX    = colX + colW - plusW / 2 - 3;
+      const plusBg  = scene.add.graphics();
       const plusTxt = scene.add.text(btnX, midY, '+', {
         fontSize: fs(13), fill: statCol, fontFamily: FontManager.MONO,
       }).setOrigin(0.5);
@@ -399,13 +387,12 @@ const TM_RightPanel = {
       plusTxt.setVisible(iv);
       _dP(false);
 
-      // ✏️ setDepth(603) 제거 — addR 로 _rightPanel 컨테이너에 종속
       const pH = scene.add.rectangle(btnX, midY, plusW, rowH - 4, 0, 0);
       if (iv) pH.setInteractive({ useHandCursor: true });
 
-      pH.on('pointerover',  () => { _dP(true);  plusTxt.setStyle({ fill: '#ffffff' }); });
-      pH.on('pointerout',   () => { _dP(false); plusTxt.setStyle({ fill: statCol }); });
-      pH.on('pointerdown',  () => {
+      pH.on('pointerover', () => { _dP(true);  plusTxt.setStyle({ fill: '#ffffff' }); });
+      pH.on('pointerout',  () => { _dP(false); plusTxt.setStyle({ fill: statCol }); });
+      pH.on('pointerdown', () => {
         const ok = (typeof CharacterManager !== 'undefined')
           ? CharacterManager.spendStat(char, key)
           : false;
@@ -461,7 +448,8 @@ const TM_RightPanel = {
   },
 
   // ── 어빌리티 — 스탯 아래에 가로 일렬 배치 ──────────────────
-  _buildAbilRow(tab, char, addR, _showTip, _moveTip, _hideTip, fs, colX, colW, startY) {
+  // ✏️ addHit 시그니처에 추가
+  _buildAbilRow(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, fs, colX, colW, startY) {
     const { scene, W, H } = tab;
     const abilItems = [
       {
@@ -517,7 +505,6 @@ const TM_RightPanel = {
           wordWrap: { width: colW - inner * 2 },
         }).setOrigin(0, 0));
 
-      // ✏️ tipHit setDepth(602) 제거 — addR 로 _rightPanel 컨테이너에 종속
       const tipHit = scene.add.rectangle(
         colX + colW / 2, curY + boxH / 2, colW, boxH, 0, 0
       ).setInteractive({ useHandCursor: false });
