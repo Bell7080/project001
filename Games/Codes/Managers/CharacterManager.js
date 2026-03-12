@@ -137,10 +137,12 @@ const CharacterManager = (() => {
       Object.values(_PASSIVE_POOL_FALLBACK).flat().forEach(n => {
         if (!PASSIVE_DATA[n]) console.warn(`[CM] PassiveData 누락: "${n}"`);
       });
-    if (typeof SKILL_DATA !== 'undefined')
+    if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
+      const skillIds = new Set(SKILL_DATA.map(s => s.id));
       Object.values(SKILL_POOL).flat().forEach(n => {
-        if (!SKILL_DATA[n]) console.warn(`[CM] SkillData 누락: "${n}"`);
+        if (!skillIds.has(n)) console.warn(`[CM] SkillData 누락: "${n}"`);
       });
+    }
   }
 
   // ── 유틸 ─────────────────────────────────────────────────────────

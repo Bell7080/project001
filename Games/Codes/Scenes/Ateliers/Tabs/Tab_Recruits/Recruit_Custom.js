@@ -796,8 +796,10 @@ Tab_Recruit.prototype._rerollStats = function () {
       const statCol = SC2[SCO[i]] || '#c8bfb0';
       const base    = (isOc && this.result.baseStats) ? this.result.baseStats[i] : v;
       const str     = isOc ? `${base}→${v}` : `${v}`;
-      this._statTexts[i].setText(str);
-      this._statTexts[i].setStyle({ fill: isOc ? ocColor : statCol });
+      const t = this._statTexts[i];
+      if (!t || !t.active) return;
+      t.setText(str);
+      t.setStyle({ fill: isOc ? ocColor : statCol });
     });
     if (this.rerolls.stat <= 0) this._disableBtn(this._statBtn, '스탯 재설정  ✕');
     else this._statBtn.txt.setText(`스탯 재설정  🎲  ${this.rerolls.stat}`);
