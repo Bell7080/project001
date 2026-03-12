@@ -47,7 +47,7 @@ const TM_RightPanel = {
     const ry   = tab._bodyY;
     const rw   = tab._rightW - pm * 2;
     const rh   = tab._bodyH;
-    const rpad = parseInt(fs(12));
+    const rpad = parseInt(fs(10));
     const colX = rx + rpad, colW = rw - rpad * 2;
     let curY   = ry + rpad;
 
@@ -116,28 +116,28 @@ const TM_RightPanel = {
 
     // ── 이름 ────────────────────────────────────────────────
     addR(scene.add.text(colX, curY, char.name, {
-      fontSize: fs(22), fill: '#e8c070', fontFamily: FontManager.TITLE,
+      fontSize: fs(28), fill: '#e8c070', fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0));
     curY += parseInt(fs(28));
 
     // ── 숙련도 ──────────────────────────────────────────────
     const masteryLv = char.mastery || 0;
     addR(scene.add.text(colX, curY, `숙련도  Lv.${masteryLv}`, {
-      fontSize: fs(11),
+      fontSize: fs(14),
       fill: masteryLv > 0 ? '#c8a060' : '#4a3018',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
-    curY += parseInt(fs(16));
+    curY += parseInt(fs(20));
 
     // ── 직업 ────────────────────────────────────────────────
     addR(scene.add.text(colX, curY, char.jobLabel || char.job, {
-      fontSize: fs(11), fill: '#7a5030', fontFamily: FontManager.MONO,
+      fontSize: fs(14), fill: '#7a5030', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
-    curY += parseInt(fs(20));
+    curY += parseInt(fs(24));
 
     // ── 오버클럭 배너 ────────────────────────────────────────
     if (char.overclock) {
-      const ocBanH = parseInt(fs(18));
+      const ocBanH = parseInt(fs(24));
       const ocBg   = scene.add.graphics();
       const ocHex  = parseInt((char.overclock.color || '#ff4400').replace('#', '0x'));
       ocBg.fillStyle(0x0c0608, 0.9);
@@ -149,14 +149,14 @@ const TM_RightPanel = {
       ocBg.strokeRect(colX, curY, colW, ocBanH);
       ocBg.fillRect(colX, curY, colW, ocBanH);
       addR(ocBg);
-      addR(scene.add.text(colX + colW / 2, curY + ocBanH / 2, char.overclock.label || '⚡ 오버클럭', {
-        fontSize: fs(9), fill: char.overclock.color || '#ff4400', fontFamily: FontManager.MONO,
+      addR(scene.add.text(colX + colW / 2, curY + ocBanH / 2, (char.overclock.label || '오버클럭').replace(/⚡\s*/g, ''), {
+        fontSize: fs(13), fill: char.overclock.color || '#ff4400', fontFamily: FontManager.MONO,
       }).setOrigin(0.5));
       curY += ocBanH + parseInt(fs(4));
     }
 
     // ── HP 바 ────────────────────────────────────────────────
-    const hpBarH = parseInt(fs(20));
+    const hpBarH = parseInt(fs(26));
     const hpPct  = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
     const hpCol  = hpPct > 0.6 ? 0x306030 : hpPct > 0.3 ? 0x806020 : 0x803020;
     const hpBgG  = scene.add.graphics();
@@ -171,12 +171,12 @@ const TM_RightPanel = {
     addR(hpFgG);
     addR(scene.add.text(colX + colW / 2, curY + hpBarH / 2,
       `HP  ${char.currentHp} / ${char.maxHp}`, {
-        fontSize: fs(9), fill: '#d0b060', fontFamily: FontManager.MONO,
+        fontSize: fs(12), fill: '#d0b060', fontFamily: FontManager.MONO,
       }).setOrigin(0.5));
     curY += hpBarH + parseInt(fs(6));
 
     // ── Cog 바 ──────────────────────────────────────────────
-    const cogBarH = parseInt(fs(20));
+    const cogBarH = parseInt(fs(26));
     const cogBgG  = scene.add.graphics();
     cogBgG.fillStyle(0x060810, 0.9);
     cogBgG.lineStyle(1, 0x4a2a10, 0.8);
@@ -185,7 +185,7 @@ const TM_RightPanel = {
     addR(cogBgG);
     addR(scene.add.text(colX + colW / 2, curY + cogBarH / 2,
       `◈  Cog  ${char.cog}  ◈`, {
-        fontSize: fs(11), fill: cogCol, fontFamily: FontManager.MONO,
+        fontSize: fs(14), fill: cogCol, fontFamily: FontManager.MONO,
       }).setOrigin(0.5));
     curY += cogBarH + parseInt(fs(8));
 
@@ -205,7 +205,7 @@ const TM_RightPanel = {
     // ── 회복 버튼 ────────────────────────────────────────────
     const missing  = char.maxHp - char.currentHp;
     const healCost = Math.ceil(missing * 0.5);
-    const btnH     = parseInt(fs(26));
+    const btnH     = parseInt(fs(32));
     const btnY     = ry + rh - btnH - rpad;
     if (missing > 0) {
       const hBg = scene.add.graphics();
@@ -220,7 +220,7 @@ const TM_RightPanel = {
       const hTxt = scene.add.text(
         colX + colW / 2, btnY + btnH / 2,
         `회복  (${healCost} Arc)`, {
-          fontSize: fs(9), fill: '#6a9060', fontFamily: FontManager.MONO,
+          fontSize: fs(13), fill: '#6a9060', fontFamily: FontManager.MONO,
         }).setOrigin(0.5);
 
       const hHit = scene.add.rectangle(
@@ -246,8 +246,8 @@ const TM_RightPanel = {
     const pendingStats = char.pendingStats || 0;
     const ocKey  = char.overclock ? char.overclock.statKey : null;
     const ocHex  = ocKey ? parseInt((char.overclock.color || '#ff4400').replace('#', '0x')) : null;
-    const rowH   = parseInt(fs(19));
-    const plusW  = parseInt(fs(19));
+    const rowH   = parseInt(fs(24));
+    const plusW  = parseInt(fs(24));
 
     const STAT_DEFS = [
       { key:'hp',      label:'체력', tip: getStatTooltip('hp')      },
@@ -325,13 +325,13 @@ const TM_RightPanel = {
       }
 
       const statT  = scene.add.text(colX + 8, midY, label, {
-        fontSize: fs(11), fill: isOc ? statCol : statCol + 'cc', fontFamily: FontManager.MONO,
+        fontSize: fs(14), fill: isOc ? statCol : statCol + 'cc', fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
       const valStr = isOc ? `${char.stats[key]||0}→${effVal}` : `${effVal}`;
       const valT   = scene.add.text(
         pendingStats > 0 ? colX + colW - plusW - 14 : colX + colW - 8,
         midY, valStr, {
-          fontSize: fs(isOc ? 10 : 13),
+          fontSize: fs(isOc ? 13 : 16),
           fill: isOc ? (char.overclock.color || '#ff4400') : statCol,
           fontFamily: FontManager.MONO,
         }).setOrigin(1, 0.5);
@@ -359,7 +359,7 @@ const TM_RightPanel = {
       const btnX    = colX + colW - plusW / 2 - 3;
       const plusBg  = scene.add.graphics();
       const plusTxt = scene.add.text(btnX, midY, '+', {
-        fontSize: fs(13), fill: statCol, fontFamily: FontManager.MONO,
+        fontSize: fs(16), fill: statCol, fontFamily: FontManager.MONO,
       }).setOrigin(0.5);
 
       const _dP = (hover) => {
@@ -434,11 +434,11 @@ const TM_RightPanel = {
       pendBg.fillRect(colX, curY, colW, pendH);
       addR(pendBg);
       addR(scene.add.text(colX + 8, curY + pendH / 2, '배분 가능', {
-        fontSize: fs(8), fill: '#7a6040', fontFamily: FontManager.MONO,
+        fontSize: fs(11), fill: '#7a6040', fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5));
       _pendingTxt = scene.add.text(colX + colW - 8, curY + pendH / 2,
         `잔여  +${pendingStats}`, {
-          fontSize: fs(9), fill: '#f0d060', fontFamily: FontManager.MONO,
+          fontSize: fs(12), fill: '#f0d060', fontFamily: FontManager.MONO,
         }).setOrigin(1, 0.5);
       addR(_pendingTxt);
       curY += pendH + parseInt(fs(4));
@@ -475,9 +475,9 @@ const TM_RightPanel = {
       },
     ];
 
-    const inner = parseInt(fs(7));
-    const nameH = parseInt(fs(15));
-    const descH = parseInt(fs(10));
+    const inner = parseInt(fs(9));
+    const nameH = parseInt(fs(19));
+    const descH = parseInt(fs(13));
     const boxH  = inner + parseInt(fs(9)) + 3 + nameH + descH + inner;
     const gap   = parseInt(fs(5));
     let curY    = startY + parseInt(fs(6));
@@ -491,17 +491,17 @@ const TM_RightPanel = {
       addR(bG);
 
       addR(scene.add.text(colX + inner, curY + inner, title, {
-        fontSize: fs(7), fill: '#5a3818', fontFamily: FontManager.MONO,
+        fontSize: fs(9), fill: '#5a3818', fontFamily: FontManager.MONO,
       }).setOrigin(0, 0));
 
       addR(scene.add.text(colX + inner, curY + inner + parseInt(fs(9)) + 2, name, {
-        fontSize: fs(12), fill: col, fontFamily: FontManager.TITLE,
+        fontSize: fs(15), fill: col, fontFamily: FontManager.TITLE,
       }).setOrigin(0, 0));
 
       addR(scene.add.text(
         colX + inner, curY + inner + parseInt(fs(9)) + 2 + nameH,
         desc || '', {
-          fontSize: fs(8), fill: '#7a5830', fontFamily: FontManager.MONO,
+          fontSize: fs(11), fill: '#7a5830', fontFamily: FontManager.MONO,
           wordWrap: { width: colW - inner * 2 },
         }).setOrigin(0, 0));
 
