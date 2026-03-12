@@ -8,13 +8,14 @@
 //    PICK   → 3개 결과 카드 중 하나 선택
 //    CUSTOM → 커스터마이징 (스탯·외형·패시브·스킬 재설정)
 //
-//  🔧 버그 수정:
-//    - _lockOverlay를 _container 안으로 이동 (destroy/hide 시 자동 제거)
+//  ✏️ v2 수정:
+//    - _lockOverlay를 _container 안으로 이동
 //    - _unlockTabs에서 _container.setDepth(0) 조작 제거
 //    - destroy()에 잠금 상태 복구 + _lockOverlay 정리 추가
-//
-//  [외부 의존 — 전역]
-//    CharacterManager, SaveManager, scaledFontSize, FontManager
+//  ✏️ v3 수정:
+//    - _clear()에 _ocGlowTween 중단 추가
+//      → Recruit_Custom.js 오버클럭 glow tween이 destroy 후에도
+//         onUpdate를 호출해 발생하던 "Cannot read properties of null (reading 'cut')" 수정
 // ================================================================
 
 class Tab_Recruit {
@@ -26,14 +27,15 @@ class Tab_Recruit {
     const save = SaveManager.load() || {};
     this.price = save.recruitPrice ?? RECRUIT_BASE_PRICE;
 
-    this.result       = null;
-    this.rerolls      = {};
-    this._lockOverlay = null;
+    this.result        = null;
+    this.rerolls       = {};
+    this._lockOverlay  = null;
+    this._ocGlowTween  = null;   // ✏️ 오버클럭 glow tween 참조
 
     this._container  = scene.add.container(0, 0);
     this._timers     = [];
     this._tweens     = [];
-    this._sceneHits  = [];   // 씬 직접 추가한 hit 박스 추적 (컨테이너 이동 시 좌표 어긋남 방지)
+    this._sceneHits  = [];
 
     this._buildReady();
   }
@@ -42,12 +44,10 @@ class Tab_Recruit {
   hide()    { this._container.setVisible(false); }
 
   destroy() {
-    // ✅ 잠금 오버레이 잔존 방지
     if (this._lockOverlay) {
       try { this._lockOverlay.destroy(); } catch(e) {}
       this._lockOverlay = null;
     }
-    // ✅ 버튼 잠금 걸린 채 destroy 되는 경우 복구
     const refs = this.scene._sideButtonRefs || [];
     refs.forEach(({ btn }) => {
       try { btn.setInteractive({ useHandCursor: true }); } catch(e) {}
@@ -56,16 +56,26 @@ class Tab_Recruit {
     this._timers.forEach(t => { if (t && t.remove) t.remove(); });
     this._tweens.forEach(t => { if (t && t.stop)   t.stop();   });
     this._sceneHits.forEach(h => { try { h.destroy(); } catch(e){} });
-    this._timers     = [];
-    this._tweens     = [];
-    this._sceneHits  = [];
+    this._timers    = [];
+    this._tweens    = [];
+    this._sceneHits = [];
     this._container.destroy();
   }
 
   // ── 내부 유틸 ─────────────────────────────────────────────────
 
-  _fs(n)   { return scaledFontSize(n, this.scene.scale); }
-  _clear() { this._container.removeAll(true); }
+  _fs(n) { return scaledFontSize(n, this.scene.scale); }
+
+  _clear() {
+    // ✏️ 오버클럭 glow tween 먼저 중단 — 컨테이너 정리 전에 반드시 실행
+    //    tween이 살아있는 상태에서 ocTxt가 destroy되면 onUpdate에서
+    //    "Cannot read properties of null (reading 'cut')" 오류 발생
+    if (this._ocGlowTween) {
+      try { this._ocGlowTween.stop(); this._ocGlowTween.remove(); } catch(e) {}
+      this._ocGlowTween = null;
+    }
+    this._container.removeAll(true);
+  }
 
   _delay(ms, fn) {
     const t = this.scene.time.delayedCall(ms, fn);
@@ -85,7 +95,6 @@ class Tab_Recruit {
     refs.forEach(({ btn }) => btn.disableInteractive());
 
     if (!this._lockOverlay) {
-      // ✅ scene.add 대신 _container에 추가 → destroy/hide 시 자동 제거
       this._lockOverlay = this.scene.add.rectangle(0, 0, this.W, this.H, 0x000000, 0.55)
         .setOrigin(0).setDepth(50);
       this._container.add(this._lockOverlay);
@@ -100,11 +109,7 @@ class Tab_Recruit {
       this._lockOverlay.destroy();
       this._lockOverlay = null;
     }
-    // ✅ _container.setDepth 조작 제거
   }
 
   // ── 나머지 메서드는 Recruit_*.js 파일에서 prototype으로 주입됨 ──
-  // _buildReady, _revealBtn, _typeText, _onHire,
-  // _buildSlot, _buildPick, _buildCustom, _confirmHire,
-  // _toast, _showHireCompletePopup 등
 }

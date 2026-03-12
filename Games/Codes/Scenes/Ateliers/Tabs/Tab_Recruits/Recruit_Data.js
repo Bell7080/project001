@@ -3,22 +3,15 @@
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Recruits/Recruit_Data.js
 //
 //  역할: 영입 탭 전용 상수 + 가챠 유틸 함수
+//  의존: Data_CharacterNames.js (CHARACTER_NAMES)
+//        Data_Overclock.js      (OVERCLOCK_CHANCE, OVERCLOCK_POOL)  ← 분리됨
+//        PositionData.js        (POSITION_POOL)
+//        PassiveData.js         (PASSIVE_POOL)
+//        SkillData.js           (SKILL_DATA — 키 참조)
 //
-//  의존 (로드 순서):
-//    Data_CharacterNames.js  → CHARACTER_NAMES
-//    Data_Jobs.js            → JOB_DATA (직업 라벨)
-//    Data_Positions.js       → POSITION_POOL
-//    Data_Passives.js        → PASSIVE_POOL
-//    Data_Skills.js          → SKILL_DATA (배열, id 기반)
-//
-//  ── 변경 이력 (v3) ───────────────────────────────────────────
-//    1. RECRUIT_SKILL_POOL — 이름 기반 → id 기반으로 교체
-//       Data_Skills.js 의 SKILL_POOL 을 직접 참조
-//       로드 실패 시 id 기반 폴백으로 대체
-//    2. 의존 파일명 주석 갱신 (Data_ 접두사 통일)
-//    3. _rRoll 내부 포지션·패시브 풀 참조 변수명 갱신
-//       POSITION_POOL → Data_Positions.js 기준
-//       PASSIVE_POOL  → Data_Passives.js 기준
+//  ── 변경 이력 ───────────────────────────────────────────────
+//    v2: 어빌리티 3분리 / 오버클럭 / 스탯 편향 / 직업 다양성 / 가격 연동 가중치
+//    v3: OVERCLOCK_CHANCE / OVERCLOCK_POOL → Data_Overclock.js 로 분리
 // ================================================================
 
 
@@ -27,11 +20,6 @@
 //   Cog 4:  64~ 82   Cog 5:  83~100   Cog 6: 101~133
 //   Cog 7: 134~166   Cog 8: 167~200   Cog 9: 201~250
 //   Cog10: 251~300
-//
-// ── 기준 가중치 (가격=5, RECRUIT_BASE_PRICE일 때) ────────────────
-//   Cog 1: ~94.9%  Cog 2: ~3.5%  Cog 3: ~1.0%
-//   Cog 4: ~0.30%  Cog 5: ~0.15% Cog 6~8: <0.05%
-//   Cog 9·10: 0% (별도 경로 전용)
 
 const RECRUIT_GACHA_BASE = [
   { cog: 1,  baseW: 9490, min:   7, max:  25 },
@@ -46,7 +34,6 @@ const RECRUIT_GACHA_BASE = [
   { cog: 10, baseW:    0, min: 251, max: 300 },
 ];
 
-// ── 가격 연동 가중치 보정 계수 ────────────────────────────────────
 const RECRUIT_COG_SCALE = {
   1:  { type: 'down',  rate: 0.05 },
   2:  { type: 'down',  rate: 0.03 },
@@ -56,130 +43,40 @@ const RECRUIT_COG_SCALE = {
   6:  { type: 'up',    rate: 0.55 },
   7:  { type: 'up',    rate: 0.75 },
   8:  { type: 'up',    rate: 1.00 },
-  9:  { type: 'fixed', val: 0 },
-  10: { type: 'fixed', val: 0 },
+  9:  { type: 'fixed', val:  0    },
+  10: { type: 'fixed', val:  0    },
 };
 
-// ── 스탯 최솟값 ──────────────────────────────────────────────────
 const RECRUIT_STAT_MINS   = [1, 0, 1, 5, 0];
 const RECRUIT_STAT_LABELS = ['체력', '건강', '공격', '민첩', '행운'];
 const RECRUIT_STAT_KEYS   = ['hp', 'health', 'attack', 'agility', 'luck'];
 
-// ── Cog 등급 색상 ─────────────────────────────────────────────────
 const RECRUIT_COG_COLORS = {
-  1:  '#7dff4f',
-  2:  '#aaee22',
-  3:  '#ccdd00',
-  4:  '#ffdd00',
-  5:  '#ffaa00',
-  6:  '#ff7700',
-  7:  '#ff4400',
-  8:  '#dd0000',
-  9:  '#ff2255',
-  10: '#cc44ff',
+  1:'#7dff4f', 2:'#aaee22', 3:'#ccdd00', 4:'#ffdd00', 5:'#ffaa00',
+  6:'#ff7700', 7:'#ff4400', 8:'#dd0000', 9:'#ff2255', 10:'#cc44ff',
 };
 
-// ── 스킬 풀 — id 기반 (Data_Skills.js 연동) ──────────────────────
-// Data_Skills.js 의 SKILL_POOL(자동생성) 또는 SKILL_DATA 배열 참조
-// 로드 실패 시 id 기반 폴백 사용
-const RECRUIT_SKILL_POOL = (() => {
-  // 1순위: Data_Skills.js 가 내보내는 SKILL_POOL 상수 직접 사용
-  if (typeof SKILL_POOL !== 'undefined') return SKILL_POOL;
+const RECRUIT_SKILL_POOL = {
+  1:  ['기본 일격', '빠른 찌르기'],
+  2:  ['연속 타격', '방어 자세'],
+  3:  ['강타', '회피 기동'],
+  4:  ['독 도포', '광역 타격'],
+  5:  ['강화 독', '순간 가속'],
+  6:  ['폭발 타격', '전방 스캔'],
+  7:  ['철갑 관통', '심해 압박'],
+  8:  ['전기 충격', '철벽 방어'],
+  9:  ['코어 오버로드', '심연의 포효'],
+  10: ['코어 오버로드', '심연의 포효'],
+};
 
-  // 2순위: SKILL_DATA 배열로 직접 빌드
-  if (typeof SKILL_DATA !== 'undefined' && Array.isArray(SKILL_DATA)) {
-    const pool = {};
-    for (let cog = 1; cog <= 10; cog++) pool[cog] = [];
-    SKILL_DATA.forEach(s => {
-      for (let cog = s.cogMin; cog <= 10; cog++) pool[cog].push(s.id);
-    });
-    return pool;
-  }
-
-  // 3순위: id 기반 하드코딩 폴백
-  return {
-    1:  ['basic_strike', 'quick_stab'],
-    2:  ['basic_strike', 'quick_stab', 'combo_hit', 'guard_stance'],
-    3:  ['combo_hit', 'guard_stance', 'heavy_blow', 'evasion', 'poison_coat'],
-    4:  ['heavy_blow', 'evasion', 'poison_coat', 'aoe_strike', 'strong_poison', 'burst_speed'],
-    5:  ['aoe_strike', 'strong_poison', 'burst_speed', 'explosion_hit', 'front_scan', 'armor_pierce'],
-    6:  ['explosion_hit', 'front_scan', 'armor_pierce', 'deep_pressure', 'electric_shock', 'iron_wall'],
-    7:  ['deep_pressure', 'electric_shock', 'iron_wall', 'core_overload', 'abyss_roar'],
-    8:  ['core_overload', 'abyss_roar'],
-    9:  ['core_overload', 'abyss_roar'],
-    10: ['core_overload', 'abyss_roar'],
-  };
-})();
-
-// ── 오버클럭 정의 ─────────────────────────────────────────────────
-const OVERCLOCK_CHANCE = 0.50;   // ⚠️ 테스트 50% (실서비스: 0.05)
-
-const OVERCLOCK_POOL = [
-  {
-    id:          'oc_attack',
-    name:        '분노 회로',
-    label:       '⚡ 오버클럭 : 공격',
-    description: '공격 스탯이 50% 증가합니다.',
-    statKey:     'attack',
-    statIdx:     2,
-    bonus:       0.50,
-    color:       '#ff4400',
-  },
-  {
-    id:          'oc_hp',
-    name:        '강화 외피',
-    label:       '⚡ 오버클럭 : 체력',
-    description: '체력 스탯이 50% 증가합니다.',
-    statKey:     'hp',
-    statIdx:     0,
-    bonus:       0.50,
-    color:       '#44dd44',
-  },
-  {
-    id:          'oc_health',
-    name:        '자가 수복',
-    label:       '⚡ 오버클럭 : 건강',
-    description: '건강 스탯이 50% 증가합니다.',
-    statKey:     'health',
-    statIdx:     1,
-    bonus:       0.50,
-    color:       '#aaffaa',
-  },
-  {
-    id:          'oc_agility',
-    name:        '가속 구동계',
-    label:       '⚡ 오버클럭 : 민첩',
-    description: '민첩 스탯이 50% 증가합니다.',
-    statKey:     'agility',
-    statIdx:     3,
-    bonus:       0.50,
-    color:       '#44ccff',
-  },
-  {
-    id:          'oc_luck',
-    name:        '행운 코어',
-    label:       '⚡ 오버클럭 : 행운',
-    description: '행운 스탯이 50% 증가합니다.',
-    statKey:     'luck',
-    statIdx:     4,
-    bonus:       0.50,
-    color:       '#ffdd00',
-  },
-];
-
-// ── 이름 풀 ──────────────────────────────────────────────────────
-// Data_CharacterNames.js → CHARACTER_NAMES 참조
 const _RECRUIT_NAME_POOL = (typeof CHARACTER_NAMES !== 'undefined' && CHARACTER_NAMES.length > 0)
   ? CHARACTER_NAMES
-  : ['볼트', '기어', '러스트', '뎁스', '아크', '스팀', '드릴', '앵커', '크롬', '스크랩'];
+  : ['볼트','기어','러스트','뎁스','아크','스팀','드릴','앵커','크롬','스크랩'];
 
-const RECRUIT_NAMES = { fisher: _RECRUIT_NAME_POOL, diver: _RECRUIT_NAME_POOL };
-
+const RECRUIT_NAMES     = { fisher: _RECRUIT_NAME_POOL, diver: _RECRUIT_NAME_POOL };
 const RECRUIT_JOB_LABEL = { fisher: '낚시꾼', diver: '잠수부' };
-// ※ 'ai'는 가챠 획득 불가 — 시설 등 별도 경로로만 획득
-const RECRUIT_JOBS = ['fisher', 'diver'];
+const RECRUIT_JOBS      = ['fisher', 'diver'];
 
-// ── 기타 상수 ────────────────────────────────────────────────────
 const RECRUIT_BASE_PRICE   = 5;
 const RECRUIT_PRICE_STEP   = 5;
 const RECRUIT_MAX_REROLL   = 3;
@@ -199,13 +96,9 @@ function _buildGachaTable(currentPrice) {
   return RECRUIT_GACHA_BASE.map(entry => {
     const sc = RECRUIT_COG_SCALE[entry.cog];
     let w = entry.baseW;
-    if (sc.type === 'fixed') {
-      w = sc.val;
-    } else if (sc.type === 'down') {
-      w = Math.round(w * Math.max(0.10, 1 - sc.rate * lv));
-    } else {
-      w = Math.round(w * (1 + sc.rate * lv));
-    }
+    if      (sc.type === 'fixed') { w = sc.val; }
+    else if (sc.type === 'down')  { w = Math.round(w * Math.max(0.10, 1 - sc.rate * lv)); }
+    else                          { w = Math.round(w * (1 + sc.rate * lv)); }
     return { cog: entry.cog, weight: w, min: entry.min, max: entry.max };
   });
 }
@@ -219,8 +112,7 @@ function _rWPick(table) {
 }
 
 function _rBiasedInRange(min, max) {
-  const biased = Math.pow(Math.random(), 1.8);
-  return min + Math.floor(biased * (max - min + 1));
+  return min + Math.floor(Math.pow(Math.random(), 1.8) * (max - min + 1));
 }
 
 function _rDist(total) {
@@ -230,12 +122,10 @@ function _rDist(total) {
   return s;
 }
 
-function _rFrom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function _rFrom(arr)     { return arr[Math.floor(Math.random() * arr.length)]; }
+function _rSpriteKey()   { return `char_${String(Math.floor(Math.random() * RECRUIT_SPRITE_COUNT)).padStart(3, '0')}`; }
 
-function _rSpriteKey() {
-  return `char_${String(Math.floor(Math.random() * RECRUIT_SPRITE_COUNT)).padStart(3, '0')}`;
-}
-
+// ── 오버클럭 롤 — Data_Overclock.js 의 OVERCLOCK_CHANCE / OVERCLOCK_POOL 참조 ──
 function _rOverclock() {
   if (Math.random() >= OVERCLOCK_CHANCE) return null;
   return OVERCLOCK_POOL[Math.floor(Math.random() * OVERCLOCK_POOL.length)];
@@ -251,18 +141,16 @@ function _applyOverclock(stats, overclock) {
 function _ensureJobDiversity(rolls) {
   const jobs = rolls.map(r => r.job);
   if (jobs.every(j => j === jobs[0])) {
-    const altJobs  = RECRUIT_JOBS.filter(j => j !== jobs[0]);
-    rolls[2].job   = _rFrom(altJobs);
-    rolls[2].name  = _rFrom(RECRUIT_NAMES[rolls[2].job]);
+    const altJobs = RECRUIT_JOBS.filter(j => j !== jobs[0]);
+    rolls[2].job  = _rFrom(altJobs);
+    rolls[2].name = _rFrom(RECRUIT_NAMES[rolls[2].job]);
   }
   return rolls;
 }
 
-// ── 가챠 1회 결과 생성 ───────────────────────────────────────────
 function _rRoll(currentPrice) {
   const price      = currentPrice ?? RECRUIT_BASE_PRICE;
-  const table      = _buildGachaTable(price);
-  const entry      = _rWPick(table);
+  const entry      = _rWPick(_buildGachaTable(price));
   const statSum    = _rBiasedInRange(entry.min, entry.max);
   const cog        = entry.cog;
   const job        = _rFrom(RECRUIT_JOBS);
@@ -271,39 +159,20 @@ function _rRoll(currentPrice) {
   const finalStats = _applyOverclock(baseStats, overclock);
   const finalSum   = finalStats.reduce((a, b) => a + b, 0);
 
-  // 포지션 — Data_Positions.js → POSITION_POOL
-  const posPool = (typeof POSITION_POOL !== 'undefined')
-    ? (POSITION_POOL[cog] || POSITION_POOL[1])
-    : ['앞칸 타격'];
-
-  // 패시브 — Data_Passives.js → PASSIVE_POOL
-  const pasPool = (typeof PASSIVE_POOL !== 'undefined')
-    ? (PASSIVE_POOL[cog] || PASSIVE_POOL[1])
-    : ['강인한 체질'];
-
-  // 스킬 — RECRUIT_SKILL_POOL (id 기반)
+  const posPool = (typeof POSITION_POOL !== 'undefined') ? (POSITION_POOL[cog] || POSITION_POOL[1]) : ['앞칸 타격'];
+  const pasPool = (typeof PASSIVE_POOL  !== 'undefined') ? (PASSIVE_POOL[cog]  || PASSIVE_POOL[1])  : ['강인한 체질'];
   const sklPool = RECRUIT_SKILL_POOL[cog] || RECRUIT_SKILL_POOL[1];
 
   return {
+    name:      _rFrom(_RECRUIT_NAME_POOL),
     job,
-    statSum:   finalSum,
-    baseSum:   statSum,
-    cog,
     stats:     finalStats,
-    baseStats: baseStats,
-    name:      _rFrom(RECRUIT_NAMES[job]),
-    spriteKey: _rSpriteKey(),
+    statSum:   finalSum,
+    cog,
     position:  _rFrom(posPool),
     passive:   _rFrom(pasPool),
     skill:     _rFrom(sklPool),
-    overclock: overclock,
+    overclock,
+    spriteKey: _rSpriteKey(),
   };
-}
-
-function _rRollTriple(currentPrice) {
-  return _ensureJobDiversity([
-    _rRoll(currentPrice),
-    _rRoll(currentPrice),
-    _rRoll(currentPrice),
-  ]);
 }
