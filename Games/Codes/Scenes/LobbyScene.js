@@ -54,3 +54,4 @@ class LobbyScene extends Phaser.Scene {
       scan.lineBetween(0, y, W, y);
     }
   }
+}
