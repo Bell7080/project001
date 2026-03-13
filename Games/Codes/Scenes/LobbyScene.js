@@ -88,7 +88,7 @@ class LobbyScene extends Phaser.Scene {
     const titleY = H * 0.355;
 
     const label = this.add.text(cx, H * 0.20, 'P  R  O  J  E  C  T    0  0  1', {
-      fontSize: scaledFontSize(18, this.scale),
+      fontSize: scaledFontSize(22, this.scale),  // ✏️ 18→22 (타이틀 위 서브라벨 가독성)
       fill: '#5a3d1a',
       fontFamily: FontManager.MONO,
       letterSpacing: 3,
@@ -126,15 +126,15 @@ class LobbyScene extends Phaser.Scene {
       strokeThickness: 1,
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(3);
 
-    const subKo = this.add.text(cx, H * 0.48, '뉴  럴  러  스  트', {
-      fontSize: scaledFontSize(29, this.scale),
+    const subKo = this.add.text(cx, H * 0.50, '뉴  럴  러  스  트', {
+      fontSize: scaledFontSize(32, this.scale),  // ✏️ 29→32, Y 0.48→0.50 (타이틀과 간격 확보)
       fill: '#6b4a28',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
     }).setOrigin(0.5).setAlpha(0).setDepth(3);
 
-    const tagline = this.add.text(cx, H * 0.54, '녹 슨  닻 으 로  전 선 을  끊 어 내 라 .', {
-      fontSize: scaledFontSize(21, this.scale),
+    const tagline = this.add.text(cx, H * 0.57, '녹 슨  닻 으 로  전 선 을  끊 어 내 라 .', {
+      fontSize: scaledFontSize(22, this.scale),  // ✏️ 21→22, Y 0.54→0.57 (서브와 겹침 방지)
       fill: '#4a3018',
       fontFamily: FontManager.MONO,
       letterSpacing: 1,
@@ -204,7 +204,7 @@ class LobbyScene extends Phaser.Scene {
     const shift  = Math.round(W * 0.008);
 
     const marker = this.add.text(x - indent, y, '│', {
-      fontSize: scaledFontSize(26, this.scale),
+      fontSize: scaledFontSize(30, this.scale),  // ✏️ 26→30 (버튼 fs36 대비 균형)
       fill: '#4a2a10',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setAlpha(0).setDepth(3);

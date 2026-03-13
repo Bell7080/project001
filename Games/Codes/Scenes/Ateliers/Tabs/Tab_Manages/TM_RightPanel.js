@@ -15,6 +15,9 @@
 //       · pointerover → 스탯 고유색 다층 글로우 + '+' 흰색
 //       · pointerout  → 기본 상태 복원 ('+' 색 statCol 복원)
 //       · pointerup   → _burst() 파티클 + 수치 갱신
+//       · _burst 핵심 수정: fillCircle(0,0) + dot.setPosition(x,y)
+//         (fillCircle(x,y)는 Graphics 로컬좌표에 그리고 tween은 position을 이동하므로
+//          기준점 불일치 → 파티클이 엉뚱한 위치에서 날아가던 버그 수정)
 //    5. SC 폴백 — 지정 STAT_COLORS 기준으로 통일
 //       hp:#ff88bb / health:#88ddaa / attack:#ff3333 / agility:#55ccff / luck:#ddcc44
 // ================================================================
@@ -390,19 +393,32 @@ const TM_RightPanel = {
     let _pendingTxt    = null;
 
     const _burst = (x, y, color) => {
-      const hc = parseInt(color.replace('#', '0x'));
+      const hc   = parseInt(color.replace('#', '0x'));
+      const rad  = parseInt(rfs(2.5));
+      const dist = parseInt(rfs(16));
       for (let k = 0; k < 8; k++) {
         const angle = (Math.PI * 2 / 8) * k;
-        const dot   = scene.add.graphics();
+        // ✏️ fillCircle(0,0) + setPosition(x,y) — Graphics 로컬좌표 버그 수정
+        //    fillCircle(x,y,...) 는 Graphics 내부 로컬에 그리고
+        //    tween은 dot.x/y(position)를 움직이므로, 기준점을 (0,0)으로 맞춰야 함
+        const dot = scene.add.graphics().setDepth(25).setPosition(x, y);
         dot.fillStyle(hc, 1);
-        dot.fillCircle(x, y, parseInt(rfs(2.5)));
+        dot.fillCircle(0, 0, rad);
+        tab._rightDetailObjs.push(dot);
         scene.tweens.add({
-          targets: dot,
-          x: x + Math.cos(angle) * parseInt(rfs(14)),
-          y: y + Math.sin(angle) * parseInt(rfs(14)),
-          alpha: 0, scaleX: 0, scaleY: 0,
-          duration: 320, ease: 'Cubic.easeOut',
-          onComplete: () => dot.destroy(),
+          targets:  dot,
+          x:        x + Math.cos(angle) * dist,
+          y:        y + Math.sin(angle) * dist,
+          alpha:    0,
+          scaleX:   0,
+          scaleY:   0,
+          duration: 320,
+          ease:     'Cubic.easeOut',
+          onComplete: () => {
+            const idx = tab._rightDetailObjs.indexOf(dot);
+            if (idx !== -1) tab._rightDetailObjs.splice(idx, 1);
+            dot.destroy();
+          },
         });
       }
     };
