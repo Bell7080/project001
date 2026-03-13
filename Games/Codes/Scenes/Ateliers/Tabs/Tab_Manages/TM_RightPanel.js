@@ -10,6 +10,10 @@
 //    2. 우측 패널 각 섹션 — 패널 전체 크기 비례 폰트/여백 확대
 //       스탯 블록 / 어빌리티 블록 각 패널 영역에 꽉 차도록 배치
 //    3. _buildStats 시그니처에 addHit 추가 (ReferenceError 수정 유지)
+//    4. + 버튼 hover/out 글로우 이펙트 추가 (Tab_CharProfile 패턴 이식)
+//       · pointerover → 스탯 고유색 다층 글로우 + '+' 텍스트 흰색
+//       · pointerout  → 기본 상태 복원
+//       · pointerup   → _burst() 파티클 + 수치 갱신 (기존 동작 유지)
 // ================================================================
 
 const TM_RightPanel = {
@@ -57,7 +61,7 @@ const TM_RightPanel = {
 
     const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
       ? CharacterManager.STAT_COLORS
-      : { hp:'#ff88bb', health:'#ff4466', attack:'#ff3333', agility:'#55ccff', luck:'#88ff88' };
+      : { hp:'#ff88bb', health:'#88ddaa', attack:'#ff3333', agility:'#55ccff', luck:'#ddcc44' };
 
     const addR   = (obj) => { tab._rightPanel.add(obj); tab._rightDetailObjs.push(obj); return obj; };
     const addHit = (obj) => { obj.setDepth(20); tab._rightDetailObjs.push(obj); return obj; };
@@ -464,17 +468,49 @@ const TM_RightPanel = {
 
       // + 버튼 (pendingStats > 0 시)
       if (pendingStats > 0) {
-        const btnX = colX + colW - plusW;
+        const btnX   = colX + colW - plusW;
         const plusBg = scene.add.graphics();
-        plusBg.fillStyle(0x0a1a0a, 0.9);
-        plusBg.lineStyle(1, 0x2a4a18, 0.8);
-        plusBg.strokeRect(btnX, sy + 1, plusW - 1, rowH - 2);
-        plusBg.fillRect(btnX, sy + 1, plusW - 1, rowH - 2);
+
+        // ── hover 상태 드로우 함수 (Tab_CharProfile 패턴 이식) ──
+        const _drawPlus = (hover) => {
+          plusBg.clear();
+          if (hover) {
+            const hc = parseInt(statCol.replace('#', '0x'));
+            [{pad:6,a:0.08},{pad:3,a:0.20},{pad:1,a:0.50}].forEach(({pad:p,a}) => {
+              plusBg.lineStyle(1, hc, a);
+              plusBg.strokeRect(btnX - p, sy + 1 - p, plusW - 1 + p * 2, rowH - 2 + p * 2);
+            });
+            plusBg.fillStyle(hc, 0.18);
+            plusBg.fillRect(btnX, sy + 1, plusW - 1, rowH - 2);
+            plusBg.lineStyle(1, hc, 0.9);
+            plusBg.strokeRect(btnX, sy + 1, plusW - 1, rowH - 2);
+          } else {
+            plusBg.fillStyle(0x0a1a0a, 0.9);
+            plusBg.lineStyle(1, 0x2a4a18, 0.8);
+            plusBg.strokeRect(btnX, sy + 1, plusW - 1, rowH - 2);
+            plusBg.fillRect(btnX, sy + 1, plusW - 1, rowH - 2);
+          }
+        };
+        _drawPlus(false);
+
         const plusTxt = scene.add.text(btnX + (plusW - 1) / 2, midY, '+', {
           fontSize: rfs(16), fill: '#6a9050', fontFamily: FontManager.MONO,
         }).setOrigin(0.5);
-        const pH = scene.add.rectangle(btnX + (plusW - 1)/2, midY, plusW, rowH, 0, 0)
+
+        const pH = scene.add.rectangle(btnX + (plusW - 1) / 2, midY, plusW, rowH, 0, 0)
           .setInteractive({ useHandCursor: true });
+
+        // ── hover / out 이벤트 ──
+        pH.on('pointerover', () => {
+          _drawPlus(true);
+          plusTxt.setStyle({ fill: '#ffffff' });
+        });
+        pH.on('pointerout', () => {
+          _drawPlus(false);
+          plusTxt.setStyle({ fill: '#6a9050' });
+        });
+
+        // ── 클릭: spendStat + burst + 수치 갱신 ──
         pH.on('pointerup', () => {
           const ok = (typeof CharacterManager !== 'undefined')
             ? CharacterManager.spendStat(char, key)
@@ -500,6 +536,7 @@ const TM_RightPanel = {
             if (_pendingTxt) _pendingTxt.setVisible(false);
           }
         });
+
         addR(plusBg);
         addR(plusTxt);
         addHit(pH);

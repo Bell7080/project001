@@ -28,10 +28,10 @@ const CharacterManager = (() => {
   // ── 스탯 색상 ────────────────────────────────────────────────────
   const STAT_COLORS = {
     hp:      '#ff88bb',
-    health:  '#ff4466',
+    health:  '#88ddaa',
     attack:  '#ff3333',
     agility: '#55ccff',
-    luck:    '#88ff88',
+    luck:    '#ddcc44',
   };
 
   const STAT_LABEL_MAP = {
