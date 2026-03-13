@@ -1,13 +1,15 @@
 // ================================================================
-//  TM_RightPanel.js
+//  TM_RightPanel.js  (PATCHED)
 //  경로: Games/Codes/Scenes/Ateliers/Tabs/Tab_Manages/TM_RightPanel.js
 //
-//  역할: 우측 패널 — 이름/숙련도/직업/오버클럭/HP/Cog/스탯/스킬탭/회복
+//  역할: 우측 패널 — 이름/숙련도/직업/오버클럭/HP/Cog/스탯/어빌리티/회복
 //
-//  수정:
-//    - _buildStats 시그니처에 addHit 추가 (ReferenceError 수정)
-//    - _buildStats 호출부에 addHit 전달
-//    - _buildAbilRow 호출부에 addHit 전달
+//  ✏️ PATCH 수정사항
+//    1. 툴팁 박스 — 이름(제목) 폰트 크게·진하게 / 설명 폰트 더 크게·색 연하게
+//                  좌측 정렬, 내용 양에 따라 박스 자동 크기 조절 (고정값 폰트)
+//    2. 우측 패널 각 섹션 — 패널 전체 크기 비례 폰트/여백 확대
+//       스탯 블록 / 어빌리티 블록 각 패널 영역에 꽉 차도록 배치
+//    3. _buildStats 시그니처에 addHit 추가 (ReferenceError 수정 유지)
 // ================================================================
 
 const TM_RightPanel = {
@@ -47,7 +49,9 @@ const TM_RightPanel = {
     const ry   = tab._bodyY;
     const rw   = tab._rightW - pm * 2;
     const rh   = tab._bodyH;
-    const rpad = parseInt(fs(10));
+
+    // ✏️ 패널 크기 비례 패딩 (rw 기준)
+    const rpad = Math.max(parseInt(fs(8)), Math.floor(rw * 0.04));
     const colX = rx + rpad, colW = rw - rpad * 2;
     let curY   = ry + rpad;
 
@@ -58,53 +62,125 @@ const TM_RightPanel = {
     const addR   = (obj) => { tab._rightPanel.add(obj); tab._rightDetailObjs.push(obj); return obj; };
     const addHit = (obj) => { obj.setDepth(20); tab._rightDetailObjs.push(obj); return obj; };
 
-    // ── 툴팁 ────────────────────────────────────────────────
+    // ════════════════════════════════════════════════════════════
+    //  ✏️ 툴팁 헬퍼 — 개선된 버전
+    //    · 이름(제목): 고정 fontSize 18, 진한 색
+    //    · 설명: 고정 fontSize 15, 연한 색
+    //    · 좌측 정렬, 내용량에 따라 박스 자동 크기 조절
+    // ════════════════════════════════════════════════════════════
+    const TIP_FS_TITLE = 18;  // 고정 폰트 크기 (제목)
+    const TIP_FS_DESC  = 15;  // 고정 폰트 크기 (설명)
+    const TIP_MAX_W    = 320; // 툴팁 최대 너비 (px)
+
     let _tip = null;
-    const _showTip = (x, y, text) => {
+    const _showTip = (x, y, rawText) => {
       _hideTip();
-      const tpad = 10, maxW = parseInt(fs(200));
-      const txtObj = addR(scene.add.text(0, 0, text, {
-        fontSize: fs(11), fill: '#f0e0b0', fontFamily: FontManager.MONO, wordWrap: { width: maxW },
-      }));
-      const bw = txtObj.width + tpad * 2, bh = txtObj.height + tpad * 2;
-      let tx = x + 16, ty = y + 16;
-      if (tx + bw > W - 8) tx = x - bw - 8;
-      if (ty + bh > H - 8) ty = y - bh - 8;
-      const bgObj = addR(scene.add.graphics());
-      bgObj.fillStyle(0x0d0b07, 0.97);
-      bgObj.lineStyle(2, 0x9a6020, 1);
+      // rawText 파싱: 첫 줄 = 제목, 이후 = 설명
+      const lines = rawText.split('\n');
+      const titleLine = lines[0] || '';
+      const descLines = lines.slice(1).join('\n').trim();
+
+      const tpad  = 14;
+      const tpadX = 16;
+
+      // 제목 텍스트 객체 (임시 생성으로 너비 측정)
+      const titleObj = scene.add.text(0, 0, titleLine, {
+        fontSize: `${TIP_FS_TITLE}px`,
+        fill: '#e8d080',
+        fontFamily: FontManager.MONO,
+        fontStyle: 'bold',
+        wordWrap: { width: TIP_MAX_W - tpadX * 2 },
+      }).setDepth(502);
+
+      const descObj = descLines ? scene.add.text(0, 0, descLines, {
+        fontSize: `${TIP_FS_DESC}px`,
+        fill: '#b8a890',
+        fontFamily: FontManager.MONO,
+        wordWrap: { width: TIP_MAX_W - tpadX * 2 },
+      }).setDepth(502) : null;
+
+      const titleH = titleObj.height;
+      const descH  = descObj ? descObj.height : 0;
+      const sepH   = descLines ? 8 : 0;
+
+      const bw = Math.min(
+        TIP_MAX_W,
+        Math.max(titleObj.width, descObj ? descObj.width : 0) + tpadX * 2
+      );
+      const bh = tpad + titleH + sepH + descH + tpad;
+
+      let tx = x + 18, ty = y + 18;
+      if (tx + bw > W - 10) tx = x - bw - 10;
+      if (ty + bh > H - 10) ty = y - bh - 10;
+
+      // 배경 박스
+      const bgObj = addR(scene.add.graphics().setDepth(501));
+      bgObj.fillStyle(0x0a0807, 0.98);
+      bgObj.lineStyle(2, 0xb07828, 1);
       bgObj.strokeRect(tx, ty, bw, bh);
       bgObj.fillRect(tx, ty, bw, bh);
       bgObj.lineStyle(1, 0x3a2010, 0.5);
       bgObj.strokeRect(tx + 3, ty + 3, bw - 6, bh - 6);
-      txtObj.setPosition(tx + tpad, ty + tpad);
-      _tip = { bg: bgObj, txt: txtObj };
+
+      // 제목 구분선
+      if (descLines) {
+        bgObj.lineStyle(1, 0x5a3810, 0.6);
+        bgObj.lineBetween(tx + tpadX, ty + tpad + titleH + 4, tx + bw - tpadX, ty + tpad + titleH + 4);
+      }
+
+      // 텍스트 배치 (좌측 정렬)
+      titleObj.setPosition(tx + tpadX, ty + tpad);
+      tab._rightDetailObjs.push(titleObj);
+
+      if (descObj) {
+        descObj.setPosition(tx + tpadX, ty + tpad + titleH + sepH);
+        tab._rightDetailObjs.push(descObj);
+      }
+
+      _tip = { bg: bgObj, title: titleObj, desc: descObj };
     };
+
     const _moveTip = (x, y) => {
       if (!_tip) return;
-      const { txt, bg } = _tip, tpad = 10;
-      const bw = txt.width + tpad * 2, bh = txt.height + tpad * 2;
-      let tx = x + 16, ty = y + 16;
-      if (tx + bw > W - 8) tx = x - bw - 8;
-      if (ty + bh > H - 8) ty = y - bh - 8;
+      const { title, desc, bg } = _tip;
+      const tpad = 14, tpadX = 16;
+      const titleH = title.height;
+      const descH  = desc ? desc.height : 0;
+      const sepH   = desc ? 8 : 0;
+      const bw = Math.min(
+        TIP_MAX_W,
+        Math.max(title.width, desc ? desc.width : 0) + tpadX * 2
+      );
+      const bh = tpad + titleH + sepH + descH + tpad;
+      let tx = x + 18, ty = y + 18;
+      if (tx + bw > W - 10) tx = x - bw - 10;
+      if (ty + bh > H - 10) ty = y - bh - 10;
       bg.clear();
-      bg.fillStyle(0x0d0b07, 0.97);
-      bg.lineStyle(2, 0x9a6020, 1);
+      bg.fillStyle(0x0a0807, 0.98);
+      bg.lineStyle(2, 0xb07828, 1);
       bg.strokeRect(tx, ty, bw, bh);
       bg.fillRect(tx, ty, bw, bh);
       bg.lineStyle(1, 0x3a2010, 0.5);
       bg.strokeRect(tx + 3, ty + 3, bw - 6, bh - 6);
-      txt.setPosition(tx + tpad, ty + tpad);
+      if (desc) {
+        bg.lineStyle(1, 0x5a3810, 0.6);
+        bg.lineBetween(tx + tpadX, ty + tpad + titleH + 4, tx + bw - tpadX, ty + tpad + titleH + 4);
+      }
+      title.setPosition(tx + tpadX, ty + tpad);
+      if (desc) desc.setPosition(tx + tpadX, ty + tpad + titleH + sepH);
     };
+
     const _hideTip = () => {
       if (_tip) {
         const rmv = (o) => {
+          if (!o) return;
           try { o.destroy(); } catch(e) {}
           const i = tab._rightDetailObjs.indexOf(o);
           if (i !== -1) tab._rightDetailObjs.splice(i, 1);
         };
         rmv(_tip.bg);
-        rmv(_tip.txt);
+        rmv(_tip.title);
+        rmv(_tip.desc);
         _tip = null;
       }
     };
@@ -114,49 +190,80 @@ const TM_RightPanel = {
     const cogCol = (typeof CharacterManager !== 'undefined' && CharacterManager.getCogColor)
       ? CharacterManager.getCogColor(char.cog).css : '#c8a040';
 
+    // ════════════════════════════════════════════════════════════
+    //  ✏️ 폰트 크기 — 패널 폭(rw) 비례 스케일 보정
+    //   rw가 클수록 폰트도 비례해서 커짐 (기준 rw=260 → 1.0배)
+    // ════════════════════════════════════════════════════════════
+    const RW_BASE = 260;
+    const rScale  = Math.max(0.85, Math.min(1.6, rw / RW_BASE));
+    const rfs = n => fs(Math.round(n * rScale));
+
     // ── 이름 ────────────────────────────────────────────────
     addR(scene.add.text(colX, curY, char.name, {
-      fontSize: fs(28), fill: '#e8c070', fontFamily: FontManager.TITLE,
+      fontSize: rfs(30), fill: '#e8c070', fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0));
-    curY += parseInt(fs(28));
+    curY += parseInt(rfs(32));
 
     // ── 숙련도 ──────────────────────────────────────────────
     const masteryLv = char.mastery || 0;
     addR(scene.add.text(colX, curY, `숙련도  Lv.${masteryLv}`, {
-      fontSize: fs(14),
-      fill: masteryLv > 0 ? '#c8a060' : '#4a3018',
+      fontSize: rfs(14),
+      fill: masteryLv > 0 ? '#b8a060' : '#5a4a28',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
-    curY += parseInt(fs(20));
+    curY += parseInt(rfs(18));
 
     // ── 직업 ────────────────────────────────────────────────
-    addR(scene.add.text(colX, curY, char.jobLabel || char.job, {
-      fontSize: fs(14), fill: '#7a5030', fontFamily: FontManager.MONO,
+    const jobLbl = addR(scene.add.text(colX, curY, `직업  :  ${char.jobLabel}`, {
+      fontSize: rfs(15), fill: '#c8802a', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0));
-    curY += parseInt(fs(24));
+    const jobHit = scene.add.rectangle(
+      colX + jobLbl.width / 2, curY + parseInt(rfs(9)),
+      jobLbl.width + 10, parseInt(rfs(20)), 0, 0
+    ).setInteractive({ useHandCursor: false });
+    jobHit.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, `직업\n${getJobTooltip(char.job)}`));
+    jobHit.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
+    jobHit.on('pointerout',  () => _hideTip());
+    addHit(jobHit);
+    curY += parseInt(rfs(20));
 
-    // ── 오버클럭 배너 ────────────────────────────────────────
+    // ── 오버클럭 ────────────────────────────────────────────
     if (char.overclock) {
-      const ocBanH = parseInt(fs(24));
-      const ocBg   = scene.add.graphics();
-      const ocHex  = parseInt((char.overclock.color || '#ff4400').replace('#', '0x'));
-      ocBg.fillStyle(0x0c0608, 0.9);
-      [{pad:4,a:0.06},{pad:2,a:0.14},{pad:1,a:0.28}].forEach(({pad:p,a}) => {
-        ocBg.lineStyle(1, ocHex, a);
-        ocBg.strokeRect(colX - p, curY - p, colW + p*2, ocBanH + p*2);
+      const ocColor  = char.overclock.color || '#ff4400';
+      const statName = (char.overclock.label || '')
+        .replace('⚡ 오버클럭 : ', '').replace('⚡ ', '');
+
+      const ocLine = addR(scene.add.text(colX, curY,
+        `오버클럭  :  ${statName}`, {
+        fontSize: rfs(13), fill: ocColor, fontFamily: FontManager.MONO,
+        stroke: ocColor, strokeThickness: 0,
+      }).setOrigin(0, 0));
+
+      const ocHitBox = scene.add.rectangle(
+        colX + ocLine.width/2, curY + parseInt(rfs(7)),
+        ocLine.width + 10, parseInt(rfs(18)), 0, 0
+      ).setInteractive({ useHandCursor: false });
+      ocHitBox.on('pointerover', (ptr) =>
+        _showTip(ptr.x, ptr.y, `${char.overclock.name}\n${char.overclock.description}`));
+      ocHitBox.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
+      ocHitBox.on('pointerout',  () => _hideTip());
+      addHit(ocHitBox);
+
+      const _ocPulse = { v: 0 };
+      const _ocTw = scene.tweens.add({
+        targets: _ocPulse, v: { from: 0, to: 1 },
+        duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+        onUpdate: () => {
+          if (!ocLine.active) return;
+          ocLine.setStyle({ fill: ocColor, stroke: ocColor, strokeThickness: _ocPulse.v * 1.5 });
+        },
       });
-      ocBg.lineStyle(1, ocHex, 0.7);
-      ocBg.strokeRect(colX, curY, colW, ocBanH);
-      ocBg.fillRect(colX, curY, colW, ocBanH);
-      addR(ocBg);
-      addR(scene.add.text(colX + colW / 2, curY + ocBanH / 2, (char.overclock.label || '오버클럭').replace(/⚡\s*/g, ''), {
-        fontSize: fs(13), fill: char.overclock.color || '#ff4400', fontFamily: FontManager.MONO,
-      }).setOrigin(0.5));
-      curY += ocBanH + parseInt(fs(4));
+      _persistTweens.push(_ocTw);
+      curY += parseInt(rfs(18));
     }
 
-    // ── HP 바 ────────────────────────────────────────────────
-    const hpBarH = parseInt(fs(26));
+    // ── HP 바 ──────────────────────────────────────────────
+    const hpBarH = parseInt(rfs(22));
     const hpPct  = char.maxHp > 0 ? char.currentHp / char.maxHp : 1;
     const hpCol  = hpPct > 0.6 ? 0x306030 : hpPct > 0.3 ? 0x806020 : 0x803020;
     const hpBgG  = scene.add.graphics();
@@ -171,12 +278,12 @@ const TM_RightPanel = {
     addR(hpFgG);
     addR(scene.add.text(colX + colW / 2, curY + hpBarH / 2,
       `HP  ${char.currentHp} / ${char.maxHp}`, {
-        fontSize: fs(12), fill: '#d0b060', fontFamily: FontManager.MONO,
+        fontSize: rfs(13), fill: '#d0b060', fontFamily: FontManager.MONO,
       }).setOrigin(0.5));
-    curY += hpBarH + parseInt(fs(6));
+    curY += hpBarH + parseInt(rfs(6));
 
     // ── Cog 바 ──────────────────────────────────────────────
-    const cogBarH = parseInt(fs(26));
+    const cogBarH = parseInt(rfs(28));
     const cogBgG  = scene.add.graphics();
     cogBgG.fillStyle(0x060810, 0.9);
     cogBgG.lineStyle(1, 0x4a2a10, 0.8);
@@ -185,27 +292,25 @@ const TM_RightPanel = {
     addR(cogBgG);
     addR(scene.add.text(colX + colW / 2, curY + cogBarH / 2,
       `◈  Cog  ${char.cog}  ◈`, {
-        fontSize: fs(14), fill: cogCol, fontFamily: FontManager.MONO,
+        fontSize: rfs(16), fill: cogCol, fontFamily: FontManager.MONO,
       }).setOrigin(0.5));
-    curY += cogBarH + parseInt(fs(8));
+    curY += cogBarH + parseInt(rfs(8));
 
     // ── 스탯 블록 ────────────────────────────────────────────
-    // ✏️ addHit 추가 전달
     curY = TM_RightPanel._buildStats(
       tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens,
-      SC, fs, colX, colW, curY, ry, rh, rpad
+      SC, fs, rfs, colX, colW, curY, ry, rh, rpad
     );
 
     // ── 어빌리티 (스탯 아래 일렬) ───────────────────────────
-    // ✏️ addHit 추가 전달
     TM_RightPanel._buildAbilRow(
-      tab, char, addR, addHit, _showTip, _moveTip, _hideTip, fs, colX, colW, curY
+      tab, char, addR, addHit, _showTip, _moveTip, _hideTip, fs, rfs, colX, colW, curY, ry, rh, rpad
     );
 
     // ── 회복 버튼 ────────────────────────────────────────────
     const missing  = char.maxHp - char.currentHp;
     const healCost = Math.ceil(missing * 0.5);
-    const btnH     = parseInt(fs(32));
+    const btnH     = parseInt(rfs(34));
     const btnY     = ry + rh - btnH - rpad;
     if (missing > 0) {
       const hBg = scene.add.graphics();
@@ -220,7 +325,7 @@ const TM_RightPanel = {
       const hTxt = scene.add.text(
         colX + colW / 2, btnY + btnH / 2,
         `회복  (${healCost} Arc)`, {
-          fontSize: fs(13), fill: '#6a9060', fontFamily: FontManager.MONO,
+          fontSize: rfs(14), fill: '#6a9060', fontFamily: FontManager.MONO,
         }).setOrigin(0.5);
 
       const hHit = scene.add.rectangle(
@@ -240,24 +345,26 @@ const TM_RightPanel = {
   },
 
   // ── 스탯 블록 ────────────────────────────────────────────────
-  // ✏️ addHit 시그니처에 추가 (ReferenceError 수정)
-  _buildStats(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens, SC, fs, colX, colW, curY, ry, rh, rpad) {
+  // ✏️ rfs(패널 비례 폰트) 추가
+  _buildStats(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, _persistTweens, SC, fs, rfs, colX, colW, curY, ry, rh, rpad) {
     const { scene } = tab;
     const pendingStats = char.pendingStats || 0;
     const ocKey  = char.overclock ? char.overclock.statKey : null;
     const ocHex  = ocKey ? parseInt((char.overclock.color || '#ff4400').replace('#', '0x')) : null;
-    const rowH   = parseInt(fs(24));
-    const plusW  = parseInt(fs(24));
+
+    // ✏️ rowH 패널 비례
+    const rowH  = parseInt(rfs(26));
+    const plusW = parseInt(rfs(26));
 
     const STAT_DEFS = [
-      { key:'hp',      label:'체력', tip: getStatTooltip('hp')      },
-      { key:'health',  label:'건강', tip: getStatTooltip('health')   },
-      { key:'attack',  label:'공격', tip: getStatTooltip('attack')   },
-      { key:'agility', label:'민첩', tip: getStatTooltip('agility')  },
-      { key:'luck',    label:'행운', tip: getStatTooltip('luck')     },
+      { key:'hp',      label:'체력', tip: `체력\n${getStatTooltip('hp')}`      },
+      { key:'health',  label:'건강', tip: `건강\n${getStatTooltip('health')}`   },
+      { key:'attack',  label:'공격', tip: `공격\n${getStatTooltip('attack')}`   },
+      { key:'agility', label:'민첩', tip: `민첩\n${getStatTooltip('agility')}`  },
+      { key:'luck',    label:'행운', tip: `행운\n${getStatTooltip('luck')}`     },
     ];
 
-    const statBH  = STAT_DEFS.length * rowH + parseInt(fs(3));
+    const statBH  = STAT_DEFS.length * rowH + parseInt(rfs(3));
     const statBg  = scene.add.graphics();
     statBg.fillStyle(0x060810, 0.85);
     if (ocKey) {
@@ -271,7 +378,7 @@ const TM_RightPanel = {
     statBg.fillRect(colX, curY, colW, statBH);
     addR(statBg);
 
-    const statStartY   = curY + parseInt(fs(2));
+    const statStartY   = curY + parseInt(rfs(2));
     const _plusButtons = [];
     const _valTxts     = {};
     let _pendingTxt    = null;
@@ -282,11 +389,11 @@ const TM_RightPanel = {
         const angle = (Math.PI * 2 / 8) * k;
         const dot   = scene.add.graphics();
         dot.fillStyle(hc, 1);
-        dot.fillCircle(x, y, parseInt(fs(2.5)));
+        dot.fillCircle(x, y, parseInt(rfs(2.5)));
         scene.tweens.add({
           targets: dot,
-          x: x + Math.cos(angle) * parseInt(fs(14)),
-          y: y + Math.sin(angle) * parseInt(fs(14)),
+          x: x + Math.cos(angle) * parseInt(rfs(14)),
+          y: y + Math.sin(angle) * parseInt(rfs(14)),
           alpha: 0, scaleX: 0, scaleY: 0,
           duration: 320, ease: 'Cubic.easeOut',
           onComplete: () => dot.destroy(),
@@ -324,109 +431,87 @@ const TM_RightPanel = {
         addR(gB);
       }
 
-      const statT  = scene.add.text(colX + 8, midY, label, {
-        fontSize: fs(14), fill: isOc ? statCol : statCol + 'cc', fontFamily: FontManager.MONO,
+      // ✏️ 라벨·수치 폰트 rfs 비례
+      const statT = scene.add.text(colX + 8, midY, label, {
+        fontSize: rfs(15),
+        fill: isOc ? (char.overclock.color || '#ff4400') : statCol + 'cc',
+        fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
-      const valStr = isOc ? `${char.stats[key]||0}→${effVal}` : `${effVal}`;
-      const valT   = scene.add.text(
-        pendingStats > 0 ? colX + colW - plusW - 14 : colX + colW - 8,
-        midY, valStr, {
-          fontSize: fs(isOc ? 13 : 16),
+
+      // ✏️ 수치 표시 — 오버클럭 행은 base→effective 형식
+      const baseVal = char.stats[key] || 0;
+      const valStr  = isOc ? `${baseVal}→${effVal}` : `${effVal}`;
+
+      const valT = scene.add.text(
+        colX + colW - (pendingStats > 0 ? plusW + 8 : 8), midY,
+        valStr, {
+          fontSize: rfs(18),
           fill: isOc ? (char.overclock.color || '#ff4400') : statCol,
           fontFamily: FontManager.MONO,
         }).setOrigin(1, 0.5);
+
       _valTxts[key] = valT;
-
-      const tipText = isOc
-        ? `${tip}\n\n[ ${char.overclock.name} ]\n${char.overclock.description}`
-        : tip;
-
-      const statHit = scene.add.rectangle(
-        colX + colW / 2, midY,
-        colW - (pendingStats > 0 ? plusW + 4 : 0), rowH,
-        0, 0
-      ).setInteractive({ useHandCursor: false });
-
-      statHit.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, tipText));
-      statHit.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
-      statHit.on('pointerout',  ()    => _hideTip());
-
       addR(statT);
       addR(valT);
-      addHit(statHit);
 
-      // ── + 버튼 ────────────────────────────────────────────
-      const btnX    = colX + colW - plusW / 2 - 3;
-      const plusBg  = scene.add.graphics();
-      const plusTxt = scene.add.text(btnX, midY, '+', {
-        fontSize: fs(16), fill: statCol, fontFamily: FontManager.MONO,
-      }).setOrigin(0.5);
+      // 툴팁 hit
+      const tipH = scene.add.rectangle(
+        colX + colW / 2, midY, colW - (pendingStats > 0 ? plusW : 0), rowH, 0, 0
+      ).setInteractive({ useHandCursor: false });
+      tipH.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, tip));
+      tipH.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
+      tipH.on('pointerout',  () => _hideTip());
+      addHit(tipH);
 
-      const _dP = (hover) => {
-        plusBg.clear();
-        if (hover) {
-          const hc = parseInt(statCol.replace('#', '0x'));
-          [{pad:5,a:0.08},{pad:3,a:0.20},{pad:1,a:0.50}].forEach(({pad:p,a}) => {
-            plusBg.lineStyle(1, hc, a);
-            plusBg.strokeRect(btnX - plusW/2 - p, midY - rowH/2 + 2 - p, plusW + p*2, rowH - 4 + p*2);
-          });
-          plusBg.fillStyle(hc, 0.18);
-          plusBg.fillRect(btnX - plusW/2, midY - rowH/2 + 2, plusW, rowH - 4);
-          plusBg.lineStyle(1, hc, 0.9);
-          plusBg.strokeRect(btnX - plusW/2, midY - rowH/2 + 2, plusW, rowH - 4);
-        } else {
-          plusBg.fillStyle(0x0e0a06, 0.8);
-          plusBg.lineStyle(1, 0x3a2010, 0.7);
-          plusBg.fillRect(btnX - plusW/2, midY - rowH/2 + 2, plusW, rowH - 4);
-          plusBg.strokeRect(btnX - plusW/2, midY - rowH/2 + 2, plusW, rowH - 4);
-        }
-      };
-
-      const iv = pendingStats > 0;
-      plusBg.setVisible(iv);
-      plusTxt.setVisible(iv);
-      _dP(false);
-
-      const pH = scene.add.rectangle(btnX, midY, plusW, rowH - 4, 0, 0);
-      if (iv) pH.setInteractive({ useHandCursor: true });
-
-      pH.on('pointerover', () => { _dP(true);  plusTxt.setStyle({ fill: '#ffffff' }); });
-      pH.on('pointerout',  () => { _dP(false); plusTxt.setStyle({ fill: statCol }); });
-      pH.on('pointerdown', () => {
-        const ok = (typeof CharacterManager !== 'undefined')
-          ? CharacterManager.spendStat(char, key)
-          : false;
-        if (!ok) return;
-        _burst(btnX, midY, statCol);
-        const ne = (typeof CharacterManager !== 'undefined')
-          ? CharacterManager.getEffectiveStat(char, key)
-          : (char.stats[key] || 0);
-        if (char.overclock && char.overclock.statKey === key) {
-          _valTxts[key].setText(`${char.stats[key]||0}→${ne}`);
-        } else {
-          _valTxts[key].setText(`${ne}`);
-        }
-        if (_pendingTxt) _pendingTxt.setText(`잔여  +${char.pendingStats || 0}`);
-        if ((char.pendingStats || 0) <= 0) {
-          _plusButtons.forEach(({ bg, txt, hit }) => {
-            bg.setVisible(false);
-            txt.setVisible(false);
-            hit.disableInteractive();
-          });
-          if (_pendingTxt) _pendingTxt.setVisible(false);
-        }
-      });
-
-      addR(plusBg);
-      addR(plusTxt);
-      addHit(pH);
-      _plusButtons.push({ bg: plusBg, txt: plusTxt, hit: pH });
+      // + 버튼 (pendingStats > 0 시)
+      if (pendingStats > 0) {
+        const btnX = colX + colW - plusW;
+        const plusBg = scene.add.graphics();
+        plusBg.fillStyle(0x0a1a0a, 0.9);
+        plusBg.lineStyle(1, 0x2a4a18, 0.8);
+        plusBg.strokeRect(btnX, sy + 1, plusW - 1, rowH - 2);
+        plusBg.fillRect(btnX, sy + 1, plusW - 1, rowH - 2);
+        const plusTxt = scene.add.text(btnX + (plusW - 1) / 2, midY, '+', {
+          fontSize: rfs(16), fill: '#6a9050', fontFamily: FontManager.MONO,
+        }).setOrigin(0.5);
+        const pH = scene.add.rectangle(btnX + (plusW - 1)/2, midY, plusW, rowH, 0, 0)
+          .setInteractive({ useHandCursor: true });
+        pH.on('pointerup', () => {
+          const ok = (typeof CharacterManager !== 'undefined')
+            ? CharacterManager.spendStat(char, key)
+            : false;
+          if (!ok) return;
+          _burst(btnX, midY, statCol);
+          const ne = (typeof CharacterManager !== 'undefined')
+            ? CharacterManager.getEffectiveStat(char, key)
+            : (char.stats[key] || 0);
+          // ✏️ 수치 갱신도 base→effective 형식 유지
+          if (char.overclock && char.overclock.statKey === key) {
+            _valTxts[key].setText(`${char.stats[key]||0}→${ne}`);
+          } else {
+            _valTxts[key].setText(`${ne}`);
+          }
+          if (_pendingTxt) _pendingTxt.setText(`잔여  +${char.pendingStats || 0}`);
+          if ((char.pendingStats || 0) <= 0) {
+            _plusButtons.forEach(({ bg, txt, hit }) => {
+              bg.setVisible(false);
+              txt.setVisible(false);
+              hit.disableInteractive();
+            });
+            if (_pendingTxt) _pendingTxt.setVisible(false);
+          }
+        });
+        addR(plusBg);
+        addR(plusTxt);
+        addHit(pH);
+        _plusButtons.push({ bg: plusBg, txt: plusTxt, hit: pH });
+      }
     });
 
-    curY += statBH + parseInt(fs(3));
+    curY += statBH + parseInt(rfs(3));
 
     if (pendingStats > 0) {
-      const pendH  = parseInt(fs(16));
+      const pendH  = parseInt(rfs(18));
       const pendBg = scene.add.graphics();
       pendBg.fillStyle(0x060810, 0.85);
       pendBg.lineStyle(1, 0x2a1a08, 0.5);
@@ -434,87 +519,102 @@ const TM_RightPanel = {
       pendBg.fillRect(colX, curY, colW, pendH);
       addR(pendBg);
       addR(scene.add.text(colX + 8, curY + pendH / 2, '배분 가능', {
-        fontSize: fs(11), fill: '#7a6040', fontFamily: FontManager.MONO,
+        fontSize: rfs(12), fill: '#7a6040', fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5));
       _pendingTxt = scene.add.text(colX + colW - 8, curY + pendH / 2,
         `잔여  +${pendingStats}`, {
-          fontSize: fs(12), fill: '#f0d060', fontFamily: FontManager.MONO,
+          fontSize: rfs(13), fill: '#f0d060', fontFamily: FontManager.MONO,
         }).setOrigin(1, 0.5);
       addR(_pendingTxt);
-      curY += pendH + parseInt(fs(4));
+      curY += pendH + parseInt(rfs(4));
     }
 
     return curY;
   },
 
   // ── 어빌리티 — 스탯 아래에 가로 일렬 배치 ──────────────────
-  // ✏️ addHit 시그니처에 추가
-  _buildAbilRow(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, fs, colX, colW, startY) {
+  // ✏️ rfs 추가, 패널 잔여 높이에 꽉 차도록 배치
+  _buildAbilRow(tab, char, addR, addHit, _showTip, _moveTip, _hideTip, fs, rfs, colX, colW, startY, ry, rh, rpad) {
     const { scene, W, H } = tab;
+
+    // 남은 패널 높이 (회복 버튼 공간 제외)
+    const healReserve = parseInt(rfs(34)) + rpad * 2;
+    const availH = (ry + rh) - startY - healReserve;
+    const abilH  = Math.max(parseInt(rfs(50)), Math.floor(availH * 0.95));
+
     const abilItems = [
       {
         title: 'POSITION',
         name: char.position || '—',
-        desc: (typeof getPositionDescription === 'function')
-          ? getPositionDescription(char.position) : (char.position || ''),
+        // ✏️ 툴팁: 제목\n설명 형식
+        tip: `${char.position || '포지션'}\n${
+          (typeof getPositionDescription === 'function') ? getPositionDescription(char.position) : (char.position || '')
+        }`,
         col: '#c8a060',
       },
       {
         title: 'PASSIVE',
         name: char.passive || '—',
-        desc: (typeof getPassiveDescription === 'function')
-          ? getPassiveDescription(char.passive) : (char.passive || ''),
+        tip: `${char.passive || '패시브'}\n${
+          (typeof getPassiveDescription === 'function') ? getPassiveDescription(char.passive) : (char.passive || '')
+        }`,
         col: '#a0d080',
       },
       {
         title: 'SKILL',
         name: char.skill || '—',
-        desc: (typeof getSkillDescription === 'function')
-          ? getSkillDescription(char.skill) : (char.skill || ''),
-        col: '#80b0e0',
+        tip: `${char.skill || '스킬'}\n${
+          (typeof getSkillDescription === 'function') ? getSkillDescription(char.skill) : (char.skill || '')
+        }`,
+        col: '#80b8e0',
       },
     ];
 
-    const inner = parseInt(fs(9));
-    const nameH = parseInt(fs(19));
-    const descH = parseInt(fs(13));
-    const boxH  = inner + parseInt(fs(9)) + 3 + nameH + descH + inner;
-    const gap   = parseInt(fs(5));
-    let curY    = startY + parseInt(fs(6));
+    const abilW = Math.floor(colW / abilItems.length);
 
-    abilItems.forEach(({ title, name, desc, col }) => {
-      const bG = scene.add.graphics();
-      bG.fillStyle(0x060810, 0.75);
-      bG.lineStyle(1, 0x2a1e10, 0.7);
-      bG.strokeRect(colX, curY, colW, boxH);
-      bG.fillRect(colX, curY, colW, boxH);
-      addR(bG);
+    abilItems.forEach((item, ai) => {
+      const ax = colX + ai * abilW;
+      const aw = (ai === abilItems.length - 1) ? colW - ai * abilW : abilW;
 
-      addR(scene.add.text(colX + inner, curY + inner, title, {
-        fontSize: fs(9), fill: '#5a3818', fontFamily: FontManager.MONO,
+      // 배경
+      const abg = scene.add.graphics();
+      abg.fillStyle(0x060c1a, 0.9);
+      abg.lineStyle(1, 0x2a1a08, 0.6);
+      abg.strokeRect(ax, startY, aw - 1, abilH);
+      abg.fillRect(ax, startY, aw - 1, abilH);
+      addR(abg);
+
+      // 타이틀 라벨 (작게, 위쪽)
+      addR(scene.add.text(ax + 5, startY + parseInt(rfs(5)), item.title, {
+        fontSize: rfs(9), fill: '#3a2808', fontFamily: FontManager.MONO,
       }).setOrigin(0, 0));
 
-      addR(scene.add.text(colX + inner, curY + inner + parseInt(fs(9)) + 2, name, {
-        fontSize: fs(15), fill: col, fontFamily: FontManager.TITLE,
-      }).setOrigin(0, 0));
+      // 구분선
+      const sg = scene.add.graphics();
+      sg.lineStyle(1, 0x1e1206, 0.5);
+      sg.lineBetween(ax + 3, startY + parseInt(rfs(17)), ax + aw - 4, startY + parseInt(rfs(17)));
+      addR(sg);
 
-      addR(scene.add.text(
-        colX + inner, curY + inner + parseInt(fs(9)) + 2 + nameH,
-        desc || '', {
-          fontSize: fs(11), fill: '#7a5830', fontFamily: FontManager.MONO,
-          wordWrap: { width: colW - inner * 2 },
-        }).setOrigin(0, 0));
+      // ✏️ 이름 텍스트 — 패널 크기 비례 폰트, 중앙 배치
+      const nameFontSize = rfs(12);
+      const nameY = startY + parseInt(rfs(17)) + (abilH - parseInt(rfs(17))) / 2;
+      const nameT = scene.add.text(ax + aw / 2, nameY, item.name, {
+        fontSize: nameFontSize,
+        fill: item.col,
+        fontFamily: FontManager.MONO,
+        align: 'center',
+        wordWrap: { width: aw - 10 },
+      }).setOrigin(0.5);
+      addR(nameT);
 
-      const tipHit = scene.add.rectangle(
-        colX + colW / 2, curY + boxH / 2, colW, boxH, 0, 0
+      // 툴팁 hit
+      const hitBox = scene.add.rectangle(
+        ax + aw / 2, startY + abilH / 2, aw, abilH, 0, 0
       ).setInteractive({ useHandCursor: false });
-
-      tipHit.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, `[ ${name} ]\n\n${desc}`));
-      tipHit.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
-      tipHit.on('pointerout',  ()    => _hideTip());
-      addHit(tipHit);
-
-      curY += boxH + gap;
+      hitBox.on('pointerover', (ptr) => _showTip(ptr.x, ptr.y, item.tip));
+      hitBox.on('pointermove', (ptr) => _moveTip(ptr.x, ptr.y));
+      hitBox.on('pointerout',  () => _hideTip());
+      addHit(hitBox);
     });
   },
 };
