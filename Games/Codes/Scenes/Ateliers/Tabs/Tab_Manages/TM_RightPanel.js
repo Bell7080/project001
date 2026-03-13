@@ -544,7 +544,7 @@ const TM_RightPanel = {
             ? CharacterManager.spendStat(char, key)
             : false;
           if (!ok) return;
-          _burst(btnX, midY, statCol);
+          _burst(btnX + plusW / 2, midY, statCol); // ✏️ btnX(좌측끝) → 버튼 중앙
           const ne = (typeof CharacterManager !== 'undefined')
             ? CharacterManager.getEffectiveStat(char, key)
             : (char.stats[key] || 0);
