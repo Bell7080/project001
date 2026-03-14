@@ -311,6 +311,63 @@
     }
 
     body.ingame { cursor: default; }
+
+    /* ════════════════════════════════════════════════════════════
+       ★ 전체화면 쉐이더 오버레이
+       ════════════════════════════════════════════════════════════
+       Phaser 캔버스 위를 덮어 모든 씬에 자동 적용됨.
+       pointer-events: none → 게임 조작에 영향 없음.
+       ShaderManager.js 가 CSS 변수를 실시간으로 업데이트함.
+    ============================================================ */
+    #shader-overlay {
+      /* CSS 변수 기본값 — ShaderManager._apply() 가 덮어씀 */
+      --vig-radius:  60%;
+      --vig-alpha:   0.50;
+      --scan-alpha:  0.10;
+      --tint-alpha:  0.08;
+      --aberr-x:     1.5px;
+      --aberr-y:     0.5px;
+
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 8000;           /* fs-overlay(9999) 보다 아래, 게임 위 */
+      display: block;
+      overflow: hidden;
+
+      /* ① 비네팅 — 주 레이어 배경 */
+      background: radial-gradient(
+        ellipse at 50% 50%,
+        transparent var(--vig-radius),
+        rgba(2, 8, 12, var(--vig-alpha)) 100%
+      );
+    }
+
+    /* ② 스캔라인 */
+    #shader-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        to bottom,
+        transparent            0px,
+        transparent            3px,
+        rgba(0, 0, 0, var(--scan-alpha)) 3px,
+        rgba(0, 0, 0, var(--scan-alpha)) 4px
+      );
+    }
+
+    /* ③ 심해 청록 틴트 + 색수차 (mix-blend-mode 활용) */
+    #shader-overlay::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* 청록 틴트 */
+      background: rgba(0, 55, 45, var(--tint-alpha));
+      mix-blend-mode: screen;
+      /* 색수차: 레이어를 살짝 밀어 RGB 분리 느낌 */
+      transform: translate(var(--aberr-x), var(--aberr-y));
+    }
   </style>
 
   <!-- 폰트 -->
@@ -373,6 +430,9 @@
 
 </div>
 
+<!-- ★ 전체화면 쉐이더 오버레이 — ShaderManager.js 가 제어 -->
+<div id="shader-overlay"></div>
+
 <div id="game-container"></div>
 
 <!-- ① Phaser 3 -->
@@ -396,6 +456,7 @@
 <!-- ② Managers (의존성 순서 엄수) -->
 <script src="Games/Codes/Managers/FontManager.js"></script>
 <script src="Games/Codes/Managers/SaveManager.js"></script>
+<script src="Games/Codes/Managers/ShaderManager.js"></script><!-- ★ SaveManager 직후 로드 -->
 <script src="Games/Codes/Managers/StoryManager.js"></script>
 <script src="Games/Codes/Dialogues/DialogueData.js"></script>
 <script src="Games/Codes/Dialogues/DialogueManager.js"></script>

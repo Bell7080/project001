@@ -7,46 +7,56 @@
 //  의존: FontManager, SaveManager, InputManager, AudioManager, utils.js
 //        scene.makeButton / scene.showConfirmPopup / scene.showToast
 //        scene.fromScene / scene._cursorTimer (cleanup용)
+//
+//  레이아웃 원칙:
+//    rowH   = H * 0.055  (하드코딩 40px 제거)
+//    boxW   = W 비례
+//    섹션 간격 = H 비례
+//    하드코딩 px 없음.
 // ================================================================
 
 const Settings_Tab_Save = {
 
   build(scene, W, H, cx) {
-    const boxX      = W * 0.08;
-    const boxW      = W * 0.76;
-    const btnW      = W * 0.10;
-    const rightBtnX = boxX + boxW + (W * 0.92 - (boxX + boxW)) / 2;
-    const rowH      = 40;
-    const startY    = H * 0.30;
+    const marginX    = W * 0.06;
+    const boxW       = W * 0.76;
+    const btnW       = W * 0.09;
+    const btnH       = Math.max(36, Math.round(H * 0.055));
+    const rightBtnX  = marginX + boxW + (W * 0.94 - (marginX + boxW)) / 2;
+    const startY     = H * 0.295;
 
-    this._buildExportCode(scene, W, H, cx, boxX, boxW, btnW, rightBtnX, rowH, startY);
-    this._buildImportCode(scene, W, H, cx, boxX, boxW, btnW, rightBtnX, rowH, startY);
-    this._buildReset(scene, W, H, cx, boxX, boxW, btnW, rightBtnX, rowH, startY);
+    this._buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
+    this._buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
+    this._buildReset(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY);
   },
 
   // ── 내보내기 ──────────────────────────────────────────────────
-  _buildExportCode(scene, W, H, cx, boxX, boxW, btnW, rightBtnX, rowH, startY) {
-    scene.add.text(boxX, startY, '[ 내 저장 코드 ]', {
-      fontSize: scaledFontSize(14, scene.scale),
-      fill: '#3d2010',
+  _buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
+    const sectionY = startY;
+    const rowH     = btnH;
+    const rowY     = sectionY + H * 0.035;
+
+    scene.add.text(marginX, sectionY, '[ 내 저장 코드 ]', {
+      fontSize: scaledFontSize(13, scene.scale),
+      fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    const gameData      = SaveManager.load();
-    const settingsData  = SaveManager.loadSettings();
-    const exportCode    = btoa(unescape(encodeURIComponent(JSON.stringify({ game: gameData, settings: settingsData }))));
+    const gameData     = SaveManager.load();
+    const settingsData = SaveManager.loadSettings();
+    const exportCode   = btoa(unescape(encodeURIComponent(JSON.stringify({ game: gameData, settings: settingsData }))));
 
-    const rowY = startY + 18;
+    // 코드 박스
     const codeBox = scene.add.graphics();
-    codeBox.fillStyle(0x0d0905, 1);
+    codeBox.fillStyle(0x0e0a06, 1);
     codeBox.lineStyle(1, 0x2a1a0a, 0.8);
-    codeBox.strokeRect(boxX, rowY, boxW, rowH);
-    codeBox.fillRect(boxX, rowY, boxW, rowH);
+    codeBox.strokeRect(marginX, rowY, boxW, rowH);
+    codeBox.fillRect(marginX, rowY, boxW, rowH);
 
-    const display = exportCode.length > 55 ? exportCode.substring(0, 55) + '…' : exportCode;
-    scene.add.text(boxX + 10, rowY + rowH / 2, display, {
-      fontSize: scaledFontSize(12, scene.scale),
-      fill: '#4a3020',
+    const display = exportCode.length > 58 ? exportCode.substring(0, 58) + '…' : exportCode;
+    scene.add.text(marginX + W * 0.012, rowY + rowH / 2, display, {
+      fontSize: scaledFontSize(11, scene.scale),
+      fill: '#5a3820',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
@@ -58,37 +68,39 @@ const Settings_Tab_Save = {
   },
 
   // ── 불러오기 ──────────────────────────────────────────────────
-  _buildImportCode(scene, W, H, cx, boxX, boxW, btnW, rightBtnX, rowH, startY) {
-    const loadY  = startY + H * 0.20;
-    const inputY = loadY + 18;
+  _buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
+    const sectionY = startY + H * 0.175;
+    const rowH     = btnH;
+    const inputY   = sectionY + H * 0.035;
 
-    scene.add.text(boxX, loadY, '[ 저장 코드로 불러오기 ]', {
-      fontSize: scaledFontSize(14, scene.scale),
-      fill: '#3d2010',
+    scene.add.text(marginX, sectionY, '[ 저장 코드로 불러오기 ]', {
+      fontSize: scaledFontSize(13, scene.scale),
+      fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
+    // 입력창 배경
     const inputBg = scene.add.graphics();
     const drawInputBg = (focused) => {
       inputBg.clear();
-      inputBg.fillStyle(0x0d0905, 1);
-      inputBg.lineStyle(1, focused ? 0x5a3018 : 0x2a1a0a, focused ? 1 : 0.8);
-      inputBg.strokeRect(boxX, inputY, boxW, rowH);
-      inputBg.fillRect(boxX, inputY, boxW, rowH);
+      inputBg.fillStyle(0x0e0a06, 1);
+      inputBg.lineStyle(1, focused ? 0x6b3820 : 0x2a1a0a, focused ? 1 : 0.8);
+      inputBg.strokeRect(marginX, inputY, boxW, rowH);
+      inputBg.fillRect(marginX, inputY, boxW, rowH);
     };
     drawInputBg(false);
 
-    let inputValue = '';
+    let inputValue  = '';
     const placeholder = '여기에 저장 코드를 입력하세요…';
 
-    const inputText = scene.add.text(boxX + 10, inputY + rowH / 2, placeholder, {
-      fontSize: scaledFontSize(12, scene.scale),
-      fill: '#251508',
+    const inputText = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, placeholder, {
+      fontSize: scaledFontSize(11, scene.scale),
+      fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10);
 
-    const cursor = scene.add.text(boxX + 10, inputY + rowH / 2, '|', {
-      fontSize: scaledFontSize(13, scene.scale),
+    const cursor = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, '|', {
+      fontSize: scaledFontSize(12, scene.scale),
       fill: '#8a6040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10).setAlpha(0);
@@ -106,19 +118,19 @@ const Settings_Tab_Save = {
 
     const updateDisplay = () => {
       if (inputValue === '') {
-        inputText.setText(placeholder).setStyle({ fill: '#251508' });
+        inputText.setText(placeholder).setStyle({ fill: '#3d2810' });
         cursor.setAlpha(0);
       } else {
-        const shown = inputValue.length > 55 ? inputValue.substring(0, 55) + '…' : inputValue;
-        inputText.setText(shown).setStyle({ fill: '#6b4020' });
-        cursor.setX(boxX + 10 + inputText.width + 2);
+        const shown = inputValue.length > 58 ? inputValue.substring(0, 58) + '…' : inputValue;
+        inputText.setText(shown).setStyle({ fill: '#7a5028' });
+        cursor.setX(marginX + W * 0.012 + inputText.width + 2);
       }
     };
 
-    const hitInput = scene.add.rectangle(boxX + boxW / 2, inputY + rowH / 2, boxW, rowH, 0x000000, 0)
+    const hitInput = scene.add.rectangle(marginX + boxW / 2, inputY + rowH / 2, boxW, rowH, 0x000000, 0)
       .setDepth(10).setInteractive({ useHandCursor: true });
 
-    hitInput.on('pointerdown', () => { focused = true;  drawInputBg(true);  });
+    hitInput.on('pointerdown', () => { focused = true;  drawInputBg(true); });
     scene.input.on('pointerdown', (ptr, objs) => {
       if (!objs.includes(hitInput)) { focused = false; drawInputBg(false); }
     });
@@ -157,27 +169,27 @@ const Settings_Tab_Save = {
   },
 
   // ── 초기화 ────────────────────────────────────────────────────
-  _buildReset(scene, W, H, cx, boxX, boxW, btnW, rightBtnX, rowH, startY) {
-    const loadY  = startY + H * 0.20;
-    const resetY = loadY + H * 0.22;
+  _buildReset(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
+    const sectionY = startY + H * 0.175 * 2;
 
+    // 구분선
     const sep = scene.add.graphics();
-    sep.lineStyle(1, 0x1e1008, 1);
-    sep.lineBetween(boxX, resetY - 14, W * 0.92, resetY - 14);
+    sep.lineStyle(1, 0x221508, 0.8);
+    sep.lineBetween(marginX, sectionY - H * 0.02, marginX + boxW + btnW + W * 0.04, sectionY - H * 0.02);
 
-    scene.add.text(boxX, resetY, '[ 초기화 ]', {
-      fontSize: scaledFontSize(14, scene.scale),
-      fill: '#3d2010',
+    scene.add.text(marginX, sectionY, '[ 초기화 ]', {
+      fontSize: scaledFontSize(13, scene.scale),
+      fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    scene.add.text(boxX, resetY + 22, '모든 저장 데이터와 설정을 삭제합니다', {
-      fontSize: scaledFontSize(12, scene.scale),
-      fill: '#251508',
+    scene.add.text(marginX, sectionY + H * 0.038, '모든 저장 데이터와 설정을 삭제합니다', {
+      fontSize: scaledFontSize(11, scene.scale),
+      fill: '#4a2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    scene.makeButton(rightBtnX, resetY + 11, btnW, rowH, '초기화', () => {
+    scene.makeButton(rightBtnX, sectionY + H * 0.019, btnW, btnH, '초기화', () => {
       scene.showConfirmPopup(cx, H, '모든 데이터를 초기화하겠습니까?', () => {
         SaveManager.deleteAll();
         localStorage.removeItem('settings_font');

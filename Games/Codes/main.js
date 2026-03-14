@@ -45,6 +45,7 @@ function startGame() {
 function _initGame() {
   try {
     AudioManager._load();
+    ShaderManager.init();
 
     const game = new Phaser.Game({
       type:            Phaser.AUTO,

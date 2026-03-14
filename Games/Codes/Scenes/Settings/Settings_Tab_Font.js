@@ -6,18 +6,36 @@
 //  호출: Settings_Tab_Font.build(scene, W, H, cx)
 //  의존: FontManager, SaveManager, utils.js
 //        scene.drawOptionBox / scene.fromScene
+//
+//  레이아웃 원칙:
+//    콘텐츠 시작 Y = H * 0.29 (SettingsScene 탭바 하단 기준)
+//    optionBoxH   = H * 0.10  (하드코딩 56px 제거)
+//    옵션 내부 텍스트 Y 오프셋 = boxH 비례
+//    미리보기 영역 = 옵션 마지막 박스 아래 H * 0.04 간격
 // ================================================================
 
 const Settings_Tab_Font = {
 
+  // ── 공통 레이아웃 상수 (build 진입 시 계산) ───────────────────
+  _layout(W, H) {
+    const marginX    = W * 0.06;
+    const contentW   = W * 0.88;
+    const optionBoxH = Math.round(H * 0.10);
+    const optionGap  = optionBoxH + Math.round(H * 0.018);
+    const firstOptY  = H * 0.345;   // 첫 박스 중앙 Y
+    return { marginX, contentW, optionBoxH, optionGap, firstOptY };
+  },
+
   build(scene, W, H, cx) {
-    scene.add.text(W * 0.08, H * 0.32, '[ 폰트 ]', {
-      fontSize: scaledFontSize(14, scene.scale),
-      fill: '#3d2010',
+    const L    = this._layout(W, H);
+    const saved = localStorage.getItem('settings_font') || 'kirang';
+
+    // 섹션 라벨
+    scene.add.text(L.marginX, H * 0.295, '[ 폰트 ]', {
+      fontSize: scaledFontSize(13, scene.scale),
+      fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
-
-    const saved = localStorage.getItem('settings_font') || 'kirang';
 
     const options = [
       { key: 'kirang', label: 'BMKiranghaerang',  desc: '기란해랑 손글씨 폰트',     family: "'BMKiranghaerang', monospace" },
@@ -25,43 +43,57 @@ const Settings_Tab_Font = {
       { key: 'system', label: 'System Default',   desc: '브라우저 기본 시스템 폰트', family: 'Arial, sans-serif' },
     ];
 
-    const baseY = H * 0.38;
-    const gap   = H * 0.13;
-    options.forEach((opt, i) => this._makeOption(scene, opt, W, baseY + gap * i, cx, saved));
-    this._buildPreview(scene, W, H, cx);
+    options.forEach((opt, i) => {
+      this._makeOption(scene, opt, W, H, cx, L, L.firstOptY + L.optionGap * i, saved);
+    });
+
+    // 미리보기 — 마지막 옵션 아래
+    const previewY = L.firstOptY + L.optionGap * options.length + H * 0.02;
+    this._buildPreview(scene, W, H, cx, L, previewY);
   },
 
-  _makeOption(scene, opt, W, y, cx, saved) {
+  _makeOption(scene, opt, W, H, cx, L, cy, saved) {
     const isSelected = saved === opt.key;
-    const box = scene.add.graphics();
-    scene.drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, isSelected);
+    const boxTop     = cy - L.optionBoxH / 2;
+    const box        = scene.add.graphics();
+    scene.drawOptionBox(box, L.marginX, boxTop, L.contentW, L.optionBoxH, isSelected);
 
-    const nameText = scene.add.text(W * 0.13, y - 8, opt.label, {
-      fontSize: scaledFontSize(18, scene.scale),
-      fill: isSelected ? '#c8a070' : '#3d2010',
+    // 마커
+    scene.add.text(L.marginX + L.contentW * 0.03, cy, isSelected ? '▶' : '·', {
+      fontSize: scaledFontSize(13, scene.scale),
+      fill: isSelected ? '#a05018' : '#3d2810',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0, 0.5);
+
+    // 옵션명 (박스 높이 기준 위쪽 1/4)
+    const nameText = scene.add.text(L.marginX + L.contentW * 0.07, cy - L.optionBoxH * 0.18, opt.label, {
+      fontSize: scaledFontSize(17, scene.scale),
+      fill: isSelected ? '#c8a070' : '#7a5028',
       fontFamily: opt.family,
     }).setOrigin(0, 0.5);
 
-    scene.add.text(W * 0.13, y + 12, opt.desc, {
-      fontSize: scaledFontSize(12, scene.scale),
-      fill: isSelected ? '#4a2810' : '#251508',
+    // 설명 (박스 높이 기준 아래쪽 1/4)
+    scene.add.text(L.marginX + L.contentW * 0.07, cy + L.optionBoxH * 0.22, opt.desc, {
+      fontSize: scaledFontSize(11, scene.scale),
+      fill: isSelected ? '#5a3820' : '#4a3018',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    scene.add.text(W * 0.09, y, isSelected ? '▶' : '·', {
-      fontSize: scaledFontSize(14, scene.scale),
-      fill: isSelected ? '#a05018' : '#251508',
-      fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0.5);
-
-    const hit = scene.add.rectangle(cx, y, W * 0.84, 56, 0x000000, 0)
+    // 히트 영역
+    const hit = scene.add.rectangle(cx, cy, L.contentW, L.optionBoxH, 0x000000, 0)
       .setInteractive({ useHandCursor: true });
 
     hit.on('pointerover', () => {
-      if (saved !== opt.key) { scene.drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, false, true); nameText.setStyle({ fill: '#8a6040' }); }
+      if (saved !== opt.key) {
+        scene.drawOptionBox(box, L.marginX, boxTop, L.contentW, L.optionBoxH, false, true);
+        nameText.setStyle({ fill: '#9a7040' });
+      }
     });
     hit.on('pointerout', () => {
-      if (saved !== opt.key) { scene.drawOptionBox(box, W * 0.08, y - 28, W * 0.84, 56, false, false); nameText.setStyle({ fill: '#3d2010' }); }
+      if (saved !== opt.key) {
+        scene.drawOptionBox(box, L.marginX, boxTop, L.contentW, L.optionBoxH, false, false);
+        nameText.setStyle({ fill: '#7a5028' });
+      }
     });
     hit.on('pointerdown', () => {
       localStorage.setItem('settings_font', opt.key);
@@ -71,27 +103,28 @@ const Settings_Tab_Font = {
     });
   },
 
-  _buildPreview(scene, W, H, cx) {
-    const py = H * 0.78;
-    const line = scene.add.graphics();
-    line.lineStyle(1, 0x1e1008, 1);
-    line.lineBetween(W * 0.1, py - 20, W * 0.9, py - 20);
+  _buildPreview(scene, W, H, cx, L, startY) {
+    // 구분선
+    const divider = scene.add.graphics();
+    divider.lineStyle(1, 0x2a1a0a, 0.8);
+    divider.lineBetween(L.marginX, startY, L.marginX + L.contentW, startY);
 
-    scene.add.text(W * 0.08, py, '미리보기', {
-      fontSize: scaledFontSize(12, scene.scale),
-      fill: '#2a1508',
+    const labelY = startY + H * 0.025;
+    scene.add.text(L.marginX, labelY, '미리보기', {
+      fontSize: scaledFontSize(11, scene.scale),
+      fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
-    scene.add.text(cx, py + 26, 'NEURAL RUST — 뉴럴 러스트 — ABC 123', {
+    scene.add.text(cx, labelY + H * 0.04, 'NEURAL RUST — 뉴럴 러스트 — ABC 123', {
       fontSize: scaledFontSize(18, scene.scale),
-      fill: '#6b4020',
+      fill: '#7a5028',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5, 0);
 
-    scene.add.text(cx, py + 54, '소프트웨어만 살아남은 세계, 붕괴 후 102년', {
-      fontSize: scaledFontSize(14, scene.scale),
-      fill: '#3d2010',
+    scene.add.text(cx, labelY + H * 0.09, '소프트웨어만 살아남은 세계, 붕괴 후 102년', {
+      fontSize: scaledFontSize(13, scene.scale),
+      fill: '#5a3820',
       fontFamily: FontManager.BODY,
     }).setOrigin(0.5, 0);
   },
