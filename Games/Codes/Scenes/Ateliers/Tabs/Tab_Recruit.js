@@ -25,6 +25,8 @@
 //      → show(), hide() 제거 (Tab_Base 상속)
 //      → destroy()를 super.destroy() 기반으로 재구성
 //    - _popupObjs 추가 (_showHireCompletePopup scene 직접 오브젝트 추적용)
+//  ✏️ v6 수정:
+//    - _toast() 추가 — 화면 하단 단순 텍스트 알림
 // ================================================================
 
 class Tab_Recruit extends Tab_Base {
@@ -106,5 +108,32 @@ class Tab_Recruit extends Tab_Base {
       try { this._lockOverlay.destroy(); } catch(e) {}
       this._lockOverlay = null;
     }
+  }
+
+  _toast(msg) {
+    const { scene, W, H } = this;
+    const txt = scene.add.text(W / 2, H * 0.72, msg, {
+      fontSize: this._fs(18), fill: '#e8c070',
+      fontFamily: FontManager.MONO,
+      stroke: '#0a0604', strokeThickness: 3,
+    }).setOrigin(0.5).setAlpha(0).setDepth(150);
+
+    this._popupObjs.push(txt);
+
+    scene.tweens.add({
+      targets: txt, alpha: 1, duration: 180, ease: 'Sine.easeOut',
+      onComplete: () => {
+        scene.time.delayedCall(1200, () => {
+          scene.tweens.add({
+            targets: txt, alpha: 0, duration: 300,
+            onComplete: () => {
+              txt.destroy();
+              const idx = this._popupObjs.indexOf(txt);
+              if (idx !== -1) this._popupObjs.splice(idx, 1);
+            },
+          });
+        });
+      },
+    });
   }
 }
