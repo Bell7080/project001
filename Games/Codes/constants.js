@@ -10,4 +10,23 @@
 const GAME_BASE_W    = 1920;         // 기준 해상도 가로
 const GAME_BASE_H    = 1080;         // 기준 해상도 세로
 const GAME_MIN_SCALE = 0.67;         // 최소 스케일 비율 (1280×720 기준)
-const GAME_VERSION   = 'v0.0.1 prototype';
+const GAME_VERSION   = {
+
+  // ── 버전 번호 ─────────────────────────────────────────────────
+  number: 'v0.0.11',
+
+  // ── 빌드 태그 (prototype / alpha / beta / release) ────────────
+  tag: 'prototype',
+
+  // ── 로비 화면 좌측 하단 분위기 텍스트 ─────────────────────────
+  atmosphere: 'YEAR 102  ·  POST-COLLAPSE',
+
+  // ── 로비 화면 우측 하단에 표시되는 기술 스택 ──────────────────
+  stack: 'PHASER 3  ·  WEB',
+
+  // ── 조합 헬퍼 (직접 수정 불필요) ─────────────────────────────
+  get full()        { return `${this.number}  ${this.tag}`; },
+  get short()       { return this.number; },
+  get footerLeft()  { return `${this.number}  ${this.tag}`; },
+  get footerRight() { return this.stack; },
+};

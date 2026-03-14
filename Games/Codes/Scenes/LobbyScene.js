@@ -266,13 +266,13 @@ class LobbyScene extends Phaser.Scene {
 
   // ── 푸터 ──────────────────────────────────────────────────────
   _buildFooter(W, H) {
-    this.add.text(W - 14, H - 12, 'v0.0.1  prototype', {
+    this.add.text(W - 14, H - 12, GAME_VERSION.full, {
       fontSize: scaledFontSize(18, this.scale),
       fill: '#3a2510',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 1).setDepth(3);
 
-    this.add.text(14, H - 12, 'YEAR 102  ·  POST-COLLAPSE', {
+    this.add.text(14, H - 12, GAME_VERSION.atmosphere, {
       fontSize: scaledFontSize(18, this.scale),
       fill: '#3a2510',
       fontFamily: FontManager.MONO,

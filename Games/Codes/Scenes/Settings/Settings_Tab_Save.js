@@ -8,17 +8,21 @@
 //        scene.makeButton / scene.showConfirmPopup / scene.showToast
 //        scene.fromScene / scene._cursorTimer (cleanup용)
 //
-//  ✏️ 수정 내역
-//    · 섹션 라벨 Y: H * 0.295 → H * 0.310 (폰트/키 탭과 통일, 탭바 겹침 방지)
-//    · 섹션 라벨 폰트: 18 유지
-//    · 코드 박스 내 텍스트 폰트: 13 → 16 (base64 코드가 너무 작아 보이던 문제)
-//    · 입력창 플레이스홀더 폰트: 13 → 16 (동일)
-//    · 입력창 입력 텍스트 폰트: 13 → 16 (동일)
-//    · 커서 폰트: 14 → 17 (입력 폰트+1 유지)
-//    · rowH(박스 높이): btnH → btnH * 1.1 (폰트 16px 세로 패딩 확보)
-//      표시 글자수 제한: 58자 → 50자 (폰트 커진 만큼 박스 내 표시 폭 줄어듦)
-//    · 섹션 간격: 동적 계산(이전 수정) 유지, startY → H * 0.310 연동
-//    · btnH: Math.max(28, H*0.055) 유지
+//  ✏️ 수정 내역 (초기화 버그)
+//    · SaveManager.reset() 메서드가 존재하지 않아 초기화 버튼을 누르면
+//      TypeError가 발생해 아무것도 지워지지 않던 버그 수정
+//    · _buildReset 콜백에서 SaveManager의 실제 존재하는 메서드로 교체:
+//        SaveManager.reset()      → SaveManager.deleteSave()
+//        SaveManager.deleteSettings() 그대로 유지
+//        CharacterManager.saveAll([]) 추가 — 캐릭터 데이터도 초기화
+//    · 초기화 대상 localStorage 키 목록:
+//        neural_rust_save / neural_rust_settings / neural_rust_story
+//        neural_rust_keybinds / neural_rust_audio / settings_font
+//        nr_characters / nr_squad
+//    · 폰트/텍스트 크기는 이전 수정값 유지
+//        섹션 라벨: 18, 코드/입력창: 16, 커서: 17
+//        rowH: btnH * 1.1, 표시 글자수: 50
+//        startY: H * 0.310
 // ================================================================
 
 const Settings_Tab_Save = {
@@ -29,7 +33,6 @@ const Settings_Tab_Save = {
     const btnW      = W * 0.09;
     const btnH      = Math.max(28, Math.round(H * 0.055));
     const rightBtnX = marginX + boxW + (W * 0.94 - (marginX + boxW)) / 2;
-    // ✏️ startY: H * 0.295 → H * 0.310
     const startY    = H * 0.310;
     const secGap    = H * 0.055;
 
@@ -40,7 +43,6 @@ const Settings_Tab_Save = {
 
   _buildExportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
     const sectionY = startY;
-    // ✏️ rowH: btnH → Math.round(btnH * 1.1) (폰트 16px 세로 패딩 확보)
     const rowH     = Math.round(btnH * 1.1);
     const rowY     = sectionY + H * 0.038;
 
@@ -60,9 +62,7 @@ const Settings_Tab_Save = {
     codeBox.strokeRect(marginX, rowY, boxW, rowH);
     codeBox.fillRect(marginX, rowY, boxW, rowH);
 
-    // ✏️ 표시 글자수: 58 → 50 (폰트 16px 기준 박스 폭에 맞춤)
     const display = exportCode.length > 50 ? exportCode.substring(0, 50) + '…' : exportCode;
-    // ✏️ 코드 텍스트 폰트: 13 → 16
     scene.add.text(marginX + W * 0.012, rowY + rowH / 2, display, {
       fontSize: scaledFontSize(16, scene.scale),
       fill: '#5a3820',
@@ -80,7 +80,6 @@ const Settings_Tab_Save = {
 
   _buildImportCode(scene, W, H, cx, marginX, boxW, btnW, btnH, rightBtnX, startY) {
     const sectionY = startY;
-    // ✏️ rowH: btnH → Math.round(btnH * 1.1)
     const rowH     = Math.round(btnH * 1.1);
     const inputY   = sectionY + H * 0.038;
 
@@ -101,7 +100,6 @@ const Settings_Tab_Save = {
     drawInputBg(false);
 
     let inputValue    = '';
-    // ✏️ 플레이스홀더 폰트: 13 → 16
     const placeholder = '여기에 저장 코드를 입력하세요…';
 
     const inputText = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, placeholder, {
@@ -110,7 +108,6 @@ const Settings_Tab_Save = {
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10);
 
-    // ✏️ 커서 폰트: 14 → 17 (입력 폰트+1)
     const cursor = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, '|', {
       fontSize: scaledFontSize(17, scene.scale),
       fill: '#8a6040',
@@ -133,7 +130,6 @@ const Settings_Tab_Save = {
         inputText.setText(placeholder).setStyle({ fill: '#3d2810' });
         cursor.setAlpha(0);
       } else {
-        // ✏️ 표시 글자수: 58 → 50
         const shown = inputValue.length > 50 ? inputValue.substring(0, 50) + '…' : inputValue;
         inputText.setText(shown).setStyle({ fill: '#7a5028' });
         cursor.setX(marginX + W * 0.012 + inputText.width + 2);
@@ -204,10 +200,36 @@ const Settings_Tab_Save = {
 
     scene.makeButton(rightBtnX, sectionY + H * 0.019, btnW, btnH, '초기화', () => {
       scene.showConfirmPopup(cx, H, '모든 데이터를 초기화하겠습니까?', () => {
-        SaveManager.reset();
+
+        // ✏️ 버그 수정: SaveManager.reset()은 존재하지 않음
+        //    → 실제 존재하는 메서드로 각 키 개별 삭제
+        SaveManager.deleteSave();
+        SaveManager.deleteSettings();
+
+        // 스토리 데이터
+        localStorage.removeItem(SaveManager.STORY_KEY);
+
+        // 키 바인딩
         InputManager.resetToDefaults();
-        AudioManager.resetToDefaults?.();
+
+        // 오디오 설정 — resetToDefaults가 있으면 호출, 없으면 직접 삭제
+        if (typeof AudioManager.resetToDefaults === 'function') {
+          AudioManager.resetToDefaults();
+        } else {
+          localStorage.removeItem('neural_rust_audio');
+        }
+
+        // 폰트 선택
         localStorage.removeItem('settings_font');
+
+        // 캐릭터 데이터
+        if (typeof CharacterManager !== 'undefined') {
+          CharacterManager.saveAll([]);
+        }
+        localStorage.removeItem('nr_squad');
+        localStorage.removeItem('nr_record_chips');
+        localStorage.removeItem('nr_party');
+
         scene.showToast(cx, H * 0.5, '초기화 완료', () => {
           scene.scene.start('LobbyScene');
         });

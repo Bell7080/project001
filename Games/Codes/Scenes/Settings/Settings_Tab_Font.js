@@ -8,13 +8,15 @@
 //        scene.drawOptionBox / scene.fromScene
 //
 //  ✏️ 수정 내역
-//    · 섹션 라벨 Y: H * 0.295 → H * 0.310
-//      탭바 구분선(H * ~0.259)과 라벨(폰트 18) 사이 여백 부족으로
-//      겹쳐 보이던 문제 해소. 라벨 상단이 구분선에서 H * 0.051 떨어짐.
-//    · firstOptY: H * 0.345 → H * 0.360
-//      섹션 라벨 이동량(+H*0.015)에 연동, 라벨→첫 박스 간격 유지.
-//    · 섹션 라벨 폰트: 18 유지
-//    · previewY: lastOptBottom + H * 0.04 기준 유지
+//    · 섹션 라벨 Y: H * 0.310 → H * 0.295
+//      firstOptY = H * 0.360, optionBoxH = H * 0.10
+//      → 첫 박스 상단 = H * 0.360 - H * 0.050 = H * 0.310
+//      라벨이 H * 0.310에 있으면 박스 상단과 정확히 겹침
+//      H * 0.295로 올려 박스 위쪽에 H * 0.015 여백 확보
+//    · setDepth 불필요 — Y값으로 공간이 분리되므로 제거
+//    · firstOptY: H * 0.360 유지
+//    · 섹션 라벨 폰트: 18
+//    · previewY: lastOptBottom + H * 0.04 기준
 // ================================================================
 
 const Settings_Tab_Font = {
@@ -24,7 +26,7 @@ const Settings_Tab_Font = {
     const contentW   = W * 0.88;
     const optionBoxH = Math.round(H * 0.10);
     const optionGap  = optionBoxH + Math.round(H * 0.018);
-    const firstOptY  = H * 0.360;   // ✏️ 0.345 → 0.360
+    const firstOptY  = H * 0.360;
     return { marginX, contentW, optionBoxH, optionGap, firstOptY };
   },
 
@@ -32,18 +34,18 @@ const Settings_Tab_Font = {
     const L     = this._layout(W, H);
     const saved = localStorage.getItem('settings_font') || 'kirang';
 
-    // ✏️ 섹션 라벨 Y: H * 0.295 → H * 0.310
-    scene.add.text(L.marginX, H * 0.310, '[ 폰트 ]', {
-      fontSize: scaledFontSize(18, scene.scale),
-      fill: '#5a3518',
-      fontFamily: FontManager.MONO,
-    }).setOrigin(0, 0.5);
-
     const options = [
       { key: 'kirang', label: 'BMKiranghaerang',  desc: '기란해랑 손글씨 폰트',     family: "'BMKiranghaerang', monospace" },
       { key: 'game',   label: 'NeoDunggeunmoPro', desc: '게임 전용 도트 폰트',       family: "'NeoDunggeunmoPro', monospace" },
       { key: 'system', label: 'System Default',   desc: '브라우저 기본 시스템 폰트', family: 'Arial, sans-serif' },
     ];
+
+    // ✏️ 섹션 라벨을 H * 0.295에 배치 — 첫 박스 상단(H * 0.310)보다 위
+    scene.add.text(L.marginX, H * 0.295, '[ 폰트 ]', {
+      fontSize: scaledFontSize(18, scene.scale),
+      fill: '#5a3518',
+      fontFamily: FontManager.MONO,
+    }).setOrigin(0, 0.5);
 
     options.forEach((opt, i) => {
       this._makeOption(scene, opt, W, H, cx, L, L.firstOptY + L.optionGap * i, saved);

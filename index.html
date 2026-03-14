@@ -400,7 +400,7 @@
   <div class="corner corner-bl"></div>
   <div class="corner corner-br"></div>
 
-  <span class="side-text side-text-l">YEAR 102 · POST-COLLAPSE</span>
+  <span class="side-text side-text-l" id="overlay-atmosphere"></span>
   <span class="side-text side-text-r">AI · IRON · RUST · VOID</span>
 
   <div class="overlay-content">
@@ -426,8 +426,8 @@
   </div>
 
   <div class="overlay-footer">
-    <span>v0.0.1  prototype</span>
-    <span>PHASER 3  ·  WEB</span>
+    <span id="overlay-version"></span>
+    <span id="overlay-stack"></span>
   </div>
 
 </div>
@@ -514,6 +514,13 @@
 
 <!-- ④ 진입점 -->
 <script src="Games/Codes/main.js"></script>
+
+<!-- ★ 버전 정보 주입 — constants.js의 GAME_VERSION 객체 참조 -->
+<script>
+  document.getElementById('overlay-atmosphere').textContent = GAME_VERSION.atmosphere;
+  document.getElementById('overlay-version').textContent    = GAME_VERSION.footerLeft;
+  document.getElementById('overlay-stack').textContent      = GAME_VERSION.footerRight;
+</script>
 
 </body>
 </html>
