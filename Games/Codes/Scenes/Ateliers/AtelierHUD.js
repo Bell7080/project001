@@ -36,7 +36,7 @@ class AtelierHUD {
     dayBg.fillRect(dayX, topY - barH / 2, dayW, barH);
 
     scene.add.text(dayX + dayW / 2, topY, `DAY  ${day}`, {
-      fontSize:      scaledFontSize(21, scene.scale),   // 14 × 1.5
+      fontSize:      FontManager.adjustedSize(21, scene.scale),   // 14 × 1.5
       fill:          '#a07040',
       fontFamily:    FontManager.MONO,
       letterSpacing: 2,
@@ -56,7 +56,7 @@ class AtelierHUD {
 
     scene.add.text(arcX + Math.round(W * 0.01), topY,
       'ARC', {
-      fontSize:      scaledFontSize(23, scene.scale),
+      fontSize:      FontManager.adjustedSize(23, scene.scale),
       fill:          '#c8881a',
       fontFamily:    FontManager.MONO,
       fontStyle:     'bold',
@@ -65,7 +65,7 @@ class AtelierHUD {
 
     this._arcNumTxt = scene.add.text(arcX + arcW - Math.round(W * 0.01), topY,
       `${arc}`, {
-      fontSize:      scaledFontSize(21, scene.scale),
+      fontSize:      FontManager.adjustedSize(21, scene.scale),
       fill:          '#f0c050',
       fontFamily:    FontManager.MONO,
       letterSpacing: 1,

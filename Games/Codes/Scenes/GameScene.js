@@ -26,19 +26,19 @@ class GameScene extends Phaser.Scene {
     for (let y = 0; y <= H; y += step) { grid.lineStyle(1, 0x0f0a05, 0.5); grid.lineBetween(0, y, W, y); }
 
     this.add.text(cx, H / 2 - 24, '[ INGAME ]', {
-      fontSize: scaledFontSize(22, this.scale),   // 18 → 22
+      fontSize: FontManager.adjustedSize(22, this.scale),   // 18 → 22
       fill: '#1a1008',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
     this.add.text(cx, H / 2 + 16, '— 개발 중 —', {
-      fontSize: scaledFontSize(14, this.scale),   // 12 → 14
+      fontSize: FontManager.adjustedSize(14, this.scale),   // 12 → 14
       fill: '#150c06',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
     this.add.text(cx, H - 28, 'ESC  →  로비로', {
-      fontSize: scaledFontSize(12, this.scale),   // 10 → 12
+      fontSize: FontManager.adjustedSize(12, this.scale),   // 10 → 12
       fill: '#150c06',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);

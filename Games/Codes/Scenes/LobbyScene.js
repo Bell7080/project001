@@ -84,11 +84,11 @@ class LobbyScene extends Phaser.Scene {
   _buildTitle(W, H, cx) {
     const SX     = 0.75;
     const SY     = 1.30;
-    const FS     = scaledFontSize(102, this.scale);
+    const FS     = FontManager.adjustedSize(102, this.scale);
     const titleY = H * 0.355;
 
     const label = this.add.text(cx, H * 0.20, 'P  R  O  J  E  C  T    0  0  1', {
-      fontSize: scaledFontSize(22, this.scale),  // ✏️ 18→22 (타이틀 위 서브라벨 가독성)
+      fontSize: FontManager.adjustedSize(22, this.scale),  // ✏️ 18→22 (타이틀 위 서브라벨 가독성)
       fill: '#5a3d1a',
       fontFamily: FontManager.MONO,
       letterSpacing: 3,
@@ -127,14 +127,14 @@ class LobbyScene extends Phaser.Scene {
     }).setOrigin(0.5).setAlpha(0).setScale(SX, SY).setDepth(3);
 
     const subKo = this.add.text(cx, H * 0.50, '뉴  럴  러  스  트', {
-      fontSize: scaledFontSize(32, this.scale),  // ✏️ 29→32, Y 0.48→0.50 (타이틀과 간격 확보)
+      fontSize: FontManager.adjustedSize(32, this.scale),  // ✏️ 29→32, Y 0.48→0.50 (타이틀과 간격 확보)
       fill: '#6b4a28',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
     }).setOrigin(0.5).setAlpha(0).setDepth(3);
 
     const tagline = this.add.text(cx, H * 0.57, '녹 슨  닻 으 로  전 선 을  끊 어 내 라 .', {
-      fontSize: scaledFontSize(22, this.scale),  // ✏️ 21→22, Y 0.54→0.57 (서브와 겹침 방지)
+      fontSize: FontManager.adjustedSize(22, this.scale),  // ✏️ 21→22, Y 0.54→0.57 (서브와 겹침 방지)
       fill: '#4a3018',
       fontFamily: FontManager.MONO,
       letterSpacing: 1,
@@ -204,13 +204,13 @@ class LobbyScene extends Phaser.Scene {
     const shift  = Math.round(W * 0.008);
 
     const marker = this.add.text(x - indent, y, '│', {
-      fontSize: scaledFontSize(30, this.scale),  // ✏️ 26→30 (버튼 fs36 대비 균형)
+      fontSize: FontManager.adjustedSize(30, this.scale),  // ✏️ 26→30 (버튼 fs36 대비 균형)
       fill: '#4a2a10',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setAlpha(0).setDepth(3);
 
     const btn = this.add.text(x, y, label, {
-      fontSize: scaledFontSize(36, this.scale),
+      fontSize: FontManager.adjustedSize(36, this.scale),
       fill: '#7a5530',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0.5).setAlpha(0).setInteractive({ useHandCursor: true }).setDepth(3);
@@ -267,13 +267,13 @@ class LobbyScene extends Phaser.Scene {
   // ── 푸터 ──────────────────────────────────────────────────────
   _buildFooter(W, H) {
     this.add.text(W - 14, H - 12, GAME_VERSION.full, {
-      fontSize: scaledFontSize(18, this.scale),
+      fontSize: FontManager.adjustedSize(18, this.scale),
       fill: '#3a2510',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 1).setDepth(3);
 
     this.add.text(14, H - 12, GAME_VERSION.atmosphere, {
-      fontSize: scaledFontSize(18, this.scale),
+      fontSize: FontManager.adjustedSize(18, this.scale),
       fill: '#3a2510',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 1).setDepth(3);

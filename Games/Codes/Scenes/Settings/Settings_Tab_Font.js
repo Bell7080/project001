@@ -42,7 +42,7 @@ const Settings_Tab_Font = {
 
     // ✏️ 섹션 라벨을 H * 0.295에 배치 — 첫 박스 상단(H * 0.310)보다 위
     scene.add.text(L.marginX, H * 0.295, '[ 폰트 ]', {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -64,19 +64,19 @@ const Settings_Tab_Font = {
     scene.drawOptionBox(box, L.marginX, boxTop, L.contentW, L.optionBoxH, isSelected);
 
     scene.add.text(L.marginX + L.contentW * 0.03, cy, isSelected ? '▶' : '·', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: FontManager.adjustedSize(15, scene.scale),
       fill: isSelected ? '#a05018' : '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     const nameText = scene.add.text(L.marginX + L.contentW * 0.07, cy - L.optionBoxH * 0.18, opt.label, {
-      fontSize: scaledFontSize(20, scene.scale),
+      fontSize: FontManager.adjustedSize(20, scene.scale),
       fill: isSelected ? '#c8a070' : '#7a5028',
       fontFamily: opt.family,
     }).setOrigin(0, 0.5);
 
     scene.add.text(L.marginX + L.contentW * 0.07, cy + L.optionBoxH * 0.22, opt.desc, {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: FontManager.adjustedSize(13, scene.scale),
       fill: isSelected ? '#5a3820' : '#4a3018',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -111,19 +111,19 @@ const Settings_Tab_Font = {
 
     const labelY = startY + H * 0.025;
     scene.add.text(L.marginX, labelY, '미리보기', {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: FontManager.adjustedSize(13, scene.scale),
       fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     scene.add.text(cx, labelY + H * 0.04, 'NEURAL RUST — 뉴럴 러스트 — ABC 123', {
-      fontSize: scaledFontSize(21, scene.scale),
+      fontSize: FontManager.adjustedSize(21, scene.scale),
       fill: '#7a5028',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5, 0);
 
     scene.add.text(cx, labelY + H * 0.09, '소프트웨어만 살아남은 세계, 붕괴 후 102년', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: FontManager.adjustedSize(15, scene.scale),
       fill: '#5a3820',
       fontFamily: FontManager.BODY,
     }).setOrigin(0.5, 0);

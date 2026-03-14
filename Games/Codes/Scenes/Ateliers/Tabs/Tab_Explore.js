@@ -32,8 +32,8 @@ class Tab_Explore extends Tab_Base {
 
     // ── 코너 장식 (drawCornerDeco 사용, 고정픽셀 → scaledFontSize 기반) ──
     const deco = scene.add.graphics();
-    const cs   = parseInt(scaledFontSize(14, scene.scale));
-    const pad  = parseInt(scaledFontSize(8, scene.scale));
+    const cs   = parseInt(FontManager.adjustedSize(14, scene.scale));
+    const pad  = parseInt(FontManager.adjustedSize(8, scene.scale));
     drawCornerDeco(
       deco,
       cx - panelW / 2 + pad, cy - panelH / 2 + pad,
@@ -42,30 +42,30 @@ class Tab_Explore extends Tab_Base {
     );
 
     // ── 상단 라벨 ────────────────────────────────────────────
-    const labelY = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
+    const labelY = cy - panelH / 2 + parseInt(FontManager.adjustedSize(26, scene.scale));
     const labelTxt = scene.add.text(cx, labelY, '[ 탐  색 ]', {
-      fontSize:      scaledFontSize(13, scene.scale),
+      fontSize:      FontManager.adjustedSize(13, scene.scale),
       fill:          '#7a5028',
       fontFamily:    FontManager.MONO,
       letterSpacing: 3,
     }).setOrigin(0.5, 0.5);
 
     // ── 구분선 ───────────────────────────────────────────────
-    const lineY = cy - panelH / 2 + parseInt(scaledFontSize(44, scene.scale));
+    const lineY = cy - panelH / 2 + parseInt(FontManager.adjustedSize(44, scene.scale));
     const lineG = scene.add.graphics();
     lineG.lineStyle(1, 0x4a2a10, 0.9);
     lineG.lineBetween(cx - panelW / 2 + 20, lineY, cx + panelW / 2 - 20, lineY);
 
     // ── 메인 텍스트 (한 줄 — 타이핑으로 등장) ───────────────
     const txt = scene.add.text(cx, cy - panelH * 0.06, '', {
-      fontSize:   scaledFontSize(32, scene.scale),
+      fontSize:   FontManager.adjustedSize(32, scene.scale),
       fill:       '#e8c080',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0);
 
     // ── 확인 버튼 (처음엔 숨김) ──────────────────────────────
-    const btnW = parseInt(scaledFontSize(130, scene.scale));
-    const btnH = parseInt(scaledFontSize(50, scene.scale));
+    const btnW = parseInt(FontManager.adjustedSize(130, scene.scale));
+    const btnH = parseInt(FontManager.adjustedSize(50, scene.scale));
     const btnY = cy + panelH * 0.30;
 
     const btnBg   = scene.add.graphics().setAlpha(0);
@@ -107,7 +107,7 @@ class Tab_Explore extends Tab_Base {
     };
 
     const btnTxt = scene.add.text(cx, btnY, '확  인', {
-      fontSize:   scaledFontSize(24, scene.scale),
+      fontSize:   FontManager.adjustedSize(24, scene.scale),
       fill:       '#ee5533',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0);

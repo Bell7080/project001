@@ -61,7 +61,7 @@ class Tab_Manage_Full {
 
   _build() {
     const { scene, W, H } = this;
-    const fs = n => scaledFontSize(n, scene.scale);
+    const fs = n => FontManager.adjustedSize(n, scene.scale);
 
     const hdrH     = parseInt(fs(44));
     const backBtnH = parseInt(fs(60));
@@ -119,7 +119,7 @@ class Tab_Manage_Full {
   _showToast(msg) {
     const { scene, W, H } = this;
     const t = scene.add.text(W / 2, H * 0.5, msg, {
-      fontSize: scaledFontSize(15, scene.scale), fill: '#cc5533', fontFamily: FontManager.MONO,
+      fontSize: FontManager.adjustedSize(15, scene.scale), fill: '#cc5533', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(700).setAlpha(0);
     this._toastObjs.push(t);
     scene.tweens.add({

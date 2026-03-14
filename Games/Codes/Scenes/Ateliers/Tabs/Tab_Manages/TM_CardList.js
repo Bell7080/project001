@@ -54,7 +54,7 @@ const TM_CardList = {
   // ── 카드 목록만 (새로고침 시 재호출) ────────────────────────
   buildCardList(tab, fs) {
     const { scene } = tab;
-    const fsFn  = fs || (n => scaledFontSize(n, scene.scale));
+    const fsFn  = fs || (n => FontManager.adjustedSize(n, scene.scale));
     const chars = tab._applyFilter(CharacterManager.initIfEmpty());
     const cw    = tab._cardAreaW;
     const ch    = parseInt(fsFn(72));
@@ -86,7 +86,7 @@ const TM_CardList = {
   // ── 필터 바 ─────────────────────────────────────────────────
   buildFilterBar(tab, fs) {
     const { scene } = tab;
-    const fsFn = fs || (n => scaledFontSize(n, scene.scale));
+    const fsFn = fs || (n => FontManager.adjustedSize(n, scene.scale));
     const fy   = tab._filterY;
     const rowH = parseInt(fsFn(26));
 
@@ -176,7 +176,7 @@ const TM_CardList = {
   // ── 개별 캐릭터 카드 ─────────────────────────────────────────
   _makeCard(tab, char, x, y, cw, ch, fsFn) {
     const { scene } = tab;
-    const fs = fsFn || (n => scaledFontSize(n, scene.scale));
+    const fs = fsFn || (n => FontManager.adjustedSize(n, scene.scale));
     const c  = scene.add.container(x, y);
 
     const JOB_BG     = { fisher:0x0b1822, diver:0x0b1a10, ai:0x16091e };

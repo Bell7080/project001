@@ -93,7 +93,7 @@ class AtelierScene extends Phaser.Scene {
     for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
     for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
     this.add.text(W / 2, H * 0.50, 'ATELIER', {
-      fontSize: scaledFontSize(80, this.scale),
+      fontSize: FontManager.adjustedSize(80, this.scale),
       fill: '#0e0a06',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0.18);
@@ -208,19 +208,19 @@ class AtelierScene extends Phaser.Scene {
 
   _makeSideButton(label, x, y, key, alignRight, idx) {
     const isActive = this._activeTab === key;
-    const indent   = parseInt(scaledFontSize(18, this.scale));
-    const shift    = parseInt(scaledFontSize(8, this.scale));
+    const indent   = parseInt(FontManager.adjustedSize(18, this.scale));
+    const shift    = parseInt(FontManager.adjustedSize(8, this.scale));
 
     const marker = this.add.text(
       alignRight ? x + indent : x - indent, y, '│', {
-        fontSize: scaledFontSize(18, this.scale),
+        fontSize: FontManager.adjustedSize(18, this.scale),
         fill: isActive ? '#c06820' : '#4a2a10',
         fontFamily: FontManager.MONO,
       }
     ).setOrigin(alignRight ? 0 : 1, 0.5).setAlpha(0);
 
     const btn = this.add.text(x, y, label, {
-      fontSize: scaledFontSize(26, this.scale),
+      fontSize: FontManager.adjustedSize(26, this.scale),
       fill: isActive ? '#e8c080' : '#7a5030',
       fontFamily: FontManager.TITLE,
     }).setOrigin(alignRight ? 1 : 0, 0.5)
@@ -250,23 +250,23 @@ class AtelierScene extends Phaser.Scene {
   }
 
   _makeExploreButton(x, y) {
-    const shift = parseInt(scaledFontSize(8, this.scale));
+    const shift = parseInt(FontManager.adjustedSize(8, this.scale));
 
     const sepLine = this.add.graphics();
     sepLine.lineStyle(1, 0x3a2a10, 0.7);
     sepLine.lineBetween(
-      x - this.W * 0.18, y - parseInt(scaledFontSize(28, this.scale)),
-      x + this.W * 0.18, y - parseInt(scaledFontSize(28, this.scale))
+      x - this.W * 0.18, y - parseInt(FontManager.adjustedSize(28, this.scale)),
+      x + this.W * 0.18, y - parseInt(FontManager.adjustedSize(28, this.scale))
     );
 
-    const marker = this.add.text(x - parseInt(scaledFontSize(36, this.scale)), y, '│', {
-      fontSize: scaledFontSize(18, this.scale),
+    const marker = this.add.text(x - parseInt(FontManager.adjustedSize(36, this.scale)), y, '│', {
+      fontSize: FontManager.adjustedSize(18, this.scale),
       fill: this._activeTab === 'explore' ? '#c06820' : '#4a2a10',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5).setAlpha(0);
 
     const btn = this.add.text(x, y, '탐    색', {
-      fontSize: scaledFontSize(28, this.scale),
+      fontSize: FontManager.adjustedSize(28, this.scale),
       fill: this._activeTab === 'explore' ? '#e8c080' : '#7a5030',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setAlpha(0);
@@ -288,7 +288,7 @@ class AtelierScene extends Phaser.Scene {
     btn.on('pointerdown', () => this._switchTab('explore'));
 
     this._uiAnimTargets.push({ obj: btn,    originX: x, originY: y, dir: 'down', delay: 200 });
-    this._uiAnimTargets.push({ obj: marker, originX: x - parseInt(scaledFontSize(36, this.scale)), originY: y, dir: 'down', delay: 220 });
+    this._uiAnimTargets.push({ obj: marker, originX: x - parseInt(FontManager.adjustedSize(36, this.scale)), originY: y, dir: 'down', delay: 220 });
   }
 
   // ── 상단 버튼 (설정 / 로비) ─────────────────────────────────
@@ -322,7 +322,7 @@ class AtelierScene extends Phaser.Scene {
     draw(false);
 
     const txt = this.add.text(bx, by, label, {
-      fontSize: scaledFontSize(13, this.scale),
+      fontSize: FontManager.adjustedSize(13, this.scale),
       fill: '#8a6030',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setAlpha(0);

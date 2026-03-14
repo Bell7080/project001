@@ -53,16 +53,16 @@ class Tab_Welcome {
     deco.lineBetween(px2, py2, px2, py2 - cs);
 
     // ── 상단 라벨 ───────────────────────────────────────────────
-    const labelY   = cy - panelH / 2 + parseInt(scaledFontSize(26, scene.scale));
+    const labelY   = cy - panelH / 2 + parseInt(FontManager.adjustedSize(26, scene.scale));
     const labelTxt = scene.add.text(cx, labelY, '[ 환  영 ]', {
-      fontSize:      scaledFontSize(13, scene.scale),
+      fontSize:      FontManager.adjustedSize(13, scene.scale),
       fill:          '#7a5028',
       fontFamily:    FontManager.MONO,
       letterSpacing: 3,
     }).setOrigin(0.5, 0.5);
 
     // ── 구분선 ──────────────────────────────────────────────────
-    const lineY = cy - panelH / 2 + parseInt(scaledFontSize(44, scene.scale));
+    const lineY = cy - panelH / 2 + parseInt(FontManager.adjustedSize(44, scene.scale));
     const lineG = scene.add.graphics();
     lineG.lineStyle(1, 0x4a2a10, 0.9);
     lineG.lineBetween(cx - panelW / 2 + 20, lineY, cx + panelW / 2 - 20, lineY);
@@ -73,7 +73,7 @@ class Tab_Welcome {
     const fullTxt = `환영합니다 ${face}`;
 
     const txt = scene.add.text(cx, cy - panelH * 0.06, '', {
-      fontSize:   scaledFontSize(32, scene.scale),
+      fontSize:   FontManager.adjustedSize(32, scene.scale),
       fill:       '#e8c080',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0);

@@ -83,12 +83,12 @@ class SettingsScene extends Phaser.Scene {
   _buildTitle(W, H, cx) {
     const titleY = H * 0.075;
     this.add.text(cx, titleY, '설  정', {
-      fontSize: scaledFontSize(50, this.scale),    // ✏️ 42 → 50
+      fontSize: FontManager.adjustedSize(50, this.scale),    // ✏️ 42 → 50
       fill: '#7a5028',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
     this.add.text(cx, titleY + H * 0.055, 'SETTINGS', {
-      fontSize: scaledFontSize(16, this.scale),    // ✏️ 14 → 16
+      fontSize: FontManager.adjustedSize(16, this.scale),    // ✏️ 14 → 16
       fill: '#3d2010',
       fontFamily: FontManager.MONO,
       letterSpacing: 6,
@@ -119,7 +119,7 @@ class SettingsScene extends Phaser.Scene {
       this._drawTabBg(bg, tx, tabY, tabW, tabH, selected);
 
       this.add.text(tx + tabW / 2, tabY + tabH / 2, tab.label, {
-        fontSize: scaledFontSize(22, this.scale),  // ✏️ 18 → 22
+        fontSize: FontManager.adjustedSize(22, this.scale),  // ✏️ 18 → 22
         fill: selected ? '#c8a070' : '#6b4520',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0.5);
@@ -156,7 +156,7 @@ class SettingsScene extends Phaser.Scene {
   // ── 뒤로가기 ──────────────────────────────────────────────────
   _buildBackButton(W, H) {
     const btn = this.add.text(W * 0.06, H * 0.935, '← 돌아가기', {
-      fontSize: scaledFontSize(26, this.scale),    // ✏️ 22 → 26
+      fontSize: FontManager.adjustedSize(26, this.scale),    // ✏️ 22 → 26
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
@@ -233,7 +233,7 @@ class SettingsScene extends Phaser.Scene {
     };
     draw(nc, nb);
     this.add.text(x, y, label, {
-      fontSize: scaledFontSize(19, this.scale),    // ✏️ 16 → 19
+      fontSize: FontManager.adjustedSize(19, this.scale),    // ✏️ 16 → 19
       fill: danger ? '#a04030' : '#7a5028',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
@@ -261,7 +261,7 @@ class SettingsScene extends Phaser.Scene {
     box.lineBetween(popX + 1, popY + 1, popX + popW - 1, popY + 1);
 
     const msgText = this.add.text(cx, popY + popH * 0.35, message, {
-      fontSize: scaledFontSize(22, this.scale),    // ✏️ 19 → 22
+      fontSize: FontManager.adjustedSize(22, this.scale),    // ✏️ 19 → 22
       fill: '#a07850',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(502);
@@ -275,7 +275,7 @@ class SettingsScene extends Phaser.Scene {
     };
     const makePopBtn = (bx, lbl, color, hcolor, cb) => {
       const t = this.add.text(bx, btnY, lbl, {
-        fontSize: scaledFontSize(22, this.scale),  // ✏️ 19 → 22
+        fontSize: FontManager.adjustedSize(22, this.scale),  // ✏️ 19 → 22
         fill: color, fontFamily: FontManager.MONO,
       }).setOrigin(0.5).setDepth(502).setInteractive({ useHandCursor: true });
       t.on('pointerover', () => t.setStyle({ fill: hcolor }));
@@ -289,7 +289,7 @@ class SettingsScene extends Phaser.Scene {
 
   showToast(cx, y, message, onComplete, color) {
     const toast = this.add.text(cx, y, message, {
-      fontSize: scaledFontSize(30, this.scale),    // ✏️ 26 → 30
+      fontSize: FontManager.adjustedSize(30, this.scale),    // ✏️ 26 → 30
       fill: color || '#c8a070',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(200).setAlpha(0);

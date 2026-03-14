@@ -42,7 +42,7 @@ function makeAtelierTab(scene, opts) {
   drawBg(selected ? 'selected' : 'normal');
 
   const txt = scene.add.text(x, y, label, {
-    fontSize:   scaledFontSize(13, scene.scale),
+    fontSize:   FontManager.adjustedSize(13, scene.scale),
     fill:       selected ? '#c8a070' : '#3d2010',
     fontFamily: FontManager.TITLE,
   }).setOrigin(0.5);

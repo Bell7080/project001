@@ -14,7 +14,7 @@ const TM_Center = {
     tab._centerPanel = scene.add.container(0, 0);
     tab._container.add(tab._centerPanel);
 
-    const fsFn = fs || (n => scaledFontSize(n, scene.scale));
+    const fsFn = fs || (n => FontManager.adjustedSize(n, scene.scale));
     const cx   = tab._listW + tab._centerW / 2;
     const cy   = tab._bodyY + tab._bodyH / 2;
 
@@ -33,7 +33,7 @@ const TM_Center = {
     tab._centerDetailObjs = [];
 
     const { scene } = tab;
-    const fs = n => scaledFontSize(n, scene.scale);
+    const fs = n => FontManager.adjustedSize(n, scene.scale);
     const pm = tab._panelMargin || 0;
 
     // 중앙 패널 영역 (여백 포함해서 정확히 중앙)

@@ -20,13 +20,13 @@ function makeStubTab(scene, W, H, title) {
   panel.fillRect(cx - panelW / 2, cy - panelH / 2, panelW, panelH);
 
   const label = scene.add.text(cx, cy - panelH / 2 + 20, `[ ${title} ]`, {
-    fontSize:   scaledFontSize(15, scene.scale),
+    fontSize:   FontManager.adjustedSize(15, scene.scale),
     fill:       '#7a5028',
     fontFamily: FontManager.MONO,
   }).setOrigin(0.5, 0);
 
   const msg = scene.add.text(cx, cy, '— 개발 중 —', {
-    fontSize:   scaledFontSize(14, scene.scale),
+    fontSize:   FontManager.adjustedSize(14, scene.scale),
     fill:       '#4a3018',
     fontFamily: FontManager.MONO,
   }).setOrigin(0.5);

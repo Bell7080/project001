@@ -25,7 +25,7 @@ const CharProfile = {
     const ph = H * 0.68;
     const px = (W - pw) / 2;
     const py = (H - ph) / 2;
-    const fs = n => scaledFontSize(n, scene.scale);
+    const fs = n => FontManager.adjustedSize(n, scene.scale);
 
     const SC = (typeof CharacterManager !== 'undefined' && CharacterManager.STAT_COLORS)
       ? CharacterManager.STAT_COLORS

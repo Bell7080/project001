@@ -61,15 +61,15 @@ class LoadingScene extends Phaser.Scene {
     // ── 텍스트 ────────────────────────────────────────────
     // ✏️ 타이틀: 12→28 (1920기준 12px는 사실상 안 보이는 크기)
     // ✏️ 도트:   34→48 (화면 중앙 기준점으로 더 뚜렷하게)
-    this.add.text(W / 2, H / 2 - parseInt(scaledFontSize(28, this.scale)) * 1.2, 'NEURAL RUST', {
-      fontSize:      scaledFontSize(28, this.scale),
+    this.add.text(W / 2, H / 2 - parseInt(FontManager.adjustedSize(28, this.scale)) * 1.2, 'NEURAL RUST', {
+      fontSize:      FontManager.adjustedSize(28, this.scale),
       fill:          '#2e1a0a',
       fontFamily:    FontManager.MONO,
       letterSpacing: 6,
     }).setOrigin(0.5);
 
     const dot = this.add.text(W / 2, H / 2, '·', {
-      fontSize:   scaledFontSize(48, this.scale),
+      fontSize:   FontManager.adjustedSize(48, this.scale),
       fill:       '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);

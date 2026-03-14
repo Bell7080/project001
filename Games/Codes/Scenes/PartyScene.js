@@ -61,7 +61,7 @@ class PartyScene extends Phaser.Scene {
 
     // 워터마크
     this.add.text(W / 2, H / 2, 'PARTY', {
-      fontSize: scaledFontSize(110, this.scale),
+      fontSize: FontManager.adjustedSize(110, this.scale),
       fill: '#0a0705', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0.06);
   }
@@ -69,14 +69,14 @@ class PartyScene extends Phaser.Scene {
   // ── 헤더 ─────────────────────────────────────────────────────────
   _buildHeader(W, H) {
     this.add.text(W / 2, H * 0.07, '파  티  편  성', {
-      fontSize: scaledFontSize(26, this.scale),
+      fontSize: FontManager.adjustedSize(26, this.scale),
       fill: '#6b4020', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
     // Cog 상한 표시
     const cogC = CharacterManager.getCogColor(this._cogMax);
-    this.add.text(W / 2, H * 0.07 + parseInt(scaledFontSize(30, this.scale)), `Cog ${this._cogMax} 이하  편성`, {
-      fontSize: scaledFontSize(13, this.scale),
+    this.add.text(W / 2, H * 0.07 + parseInt(FontManager.adjustedSize(30, this.scale)), `Cog ${this._cogMax} 이하  편성`, {
+      fontSize: FontManager.adjustedSize(13, this.scale),
       fill: cogC.css, fontFamily: FontManager.MONO, letterSpacing: 3,
     }).setOrigin(0.5);
 
@@ -87,14 +87,14 @@ class PartyScene extends Phaser.Scene {
 
     // 뒤로 가기
     const backTxt = this.add.text(W * 0.06, H * 0.07, '← 뒤로', {
-      fontSize: scaledFontSize(14, this.scale),
+      fontSize: FontManager.adjustedSize(14, this.scale),
       fill: '#3d2010', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     const backHit = this.add.rectangle(
       backTxt.x + backTxt.width / 2,
       backTxt.y,
-      backTxt.width + 20, parseInt(scaledFontSize(20, this.scale)) + 10,
+      backTxt.width + 20, parseInt(FontManager.adjustedSize(20, this.scale)) + 10,
       0x000000, 0
     ).setInteractive({ useHandCursor: true });
 
@@ -114,7 +114,7 @@ class PartyScene extends Phaser.Scene {
     const slotY  = H * 0.26;
 
     this.add.text(W / 2, H * 0.16, '파  티', {
-      fontSize: scaledFontSize(15, this.scale),
+      fontSize: FontManager.adjustedSize(15, this.scale),
       fill: '#4a2a10', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
@@ -146,23 +146,23 @@ class PartyScene extends Phaser.Scene {
 
     // 빈 슬롯 표시
     const plusTxt = this.add.text(cx, cy - 10, '+', {
-      fontSize: scaledFontSize(28, this.scale),
+      fontSize: FontManager.adjustedSize(28, this.scale),
       fill: '#1e1008', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
-    const slotNumTxt = this.add.text(cx, cy + parseInt(scaledFontSize(20, this.scale)), `${idx + 1}`, {
-      fontSize: scaledFontSize(11, this.scale),
+    const slotNumTxt = this.add.text(cx, cy + parseInt(FontManager.adjustedSize(20, this.scale)), `${idx + 1}`, {
+      fontSize: FontManager.adjustedSize(11, this.scale),
       fill: '#1a0e06', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 
     // 캐릭터 배치 시 표시될 텍스트들 (초기 숨김)
     const nameTxt = this.add.text(cx, cy - h * 0.28, '', {
-      fontSize: scaledFontSize(11, this.scale),
+      fontSize: FontManager.adjustedSize(11, this.scale),
       fill: '#c8bfb0', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0);
 
     const cogTxt = this.add.text(cx, cy - h * 0.38, '', {
-      fontSize: scaledFontSize(10, this.scale),
+      fontSize: FontManager.adjustedSize(10, this.scale),
       fill: '#a05018', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setAlpha(0);
 
@@ -170,7 +170,7 @@ class PartyScene extends Phaser.Scene {
     sprite.setDisplaySize(w * 0.75, w * 0.75);
 
     const removeTxt = this.add.text(cx, cy + h * 0.38, '[ 제거 ]', {
-      fontSize: scaledFontSize(10, this.scale),
+      fontSize: FontManager.adjustedSize(10, this.scale),
       fill: '#3d2010', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setAlpha(0);
 
@@ -235,14 +235,14 @@ class PartyScene extends Phaser.Scene {
     const startX   = W / 2 - ((cols - 1) / 2) * (cardW + gapX);
 
     this.add.text(W / 2, H * 0.44, '캐  릭  터', {
-      fontSize: scaledFontSize(15, this.scale),
+      fontSize: FontManager.adjustedSize(15, this.scale),
       fill: '#4a2a10', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
-    this.add.text(W / 2, H * 0.44 + parseInt(scaledFontSize(18, this.scale)),
+    this.add.text(W / 2, H * 0.44 + parseInt(FontManager.adjustedSize(18, this.scale)),
       `Cog ${this._cogMax} 초과 캐릭터는 비활성화`,
       {
-        fontSize: scaledFontSize(10, this.scale),
+        fontSize: FontManager.adjustedSize(10, this.scale),
         fill: '#2a1508', fontFamily: FontManager.MONO, letterSpacing: 2,
       }
     ).setOrigin(0.5);
@@ -312,14 +312,14 @@ class PartyScene extends Phaser.Scene {
 
     // Cog 뱃지
     const cogTxt = this.add.text(cx - w * 0.35, cy - h * 0.42, `Cog${char.cog}`, {
-      fontSize: scaledFontSize(9, this.scale),
+      fontSize: FontManager.adjustedSize(9, this.scale),
       fill: cogC.css, fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setAlpha(alpha);
     container.add(cogTxt);
 
     // 직업
     const jobTxt = this.add.text(cx + w * 0.4, cy - h * 0.42, char.jobLabel, {
-      fontSize: scaledFontSize(9, this.scale),
+      fontSize: FontManager.adjustedSize(9, this.scale),
       fill: '#4a3020', fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5).setAlpha(alpha);
     container.add(jobTxt);
@@ -334,7 +334,7 @@ class PartyScene extends Phaser.Scene {
 
     // 이름
     const nameTxt = this.add.text(cx, cy + h * 0.3, char.name, {
-      fontSize: scaledFontSize(11, this.scale),
+      fontSize: FontManager.adjustedSize(11, this.scale),
       fill: disabled ? '#2a1a0a' : '#c8bfb0', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(alpha);
     container.add(nameTxt);
@@ -355,7 +355,7 @@ class PartyScene extends Phaser.Scene {
 
     // 파티 편성 중 표시
     const inPartMark = this.add.text(cx, cy - h * 0.28, '▶ 편성중', {
-      fontSize: scaledFontSize(9, this.scale),
+      fontSize: FontManager.adjustedSize(9, this.scale),
       fill: '#ffd060', fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setAlpha(0);
     container.add(inPartMark);
@@ -368,7 +368,7 @@ class PartyScene extends Phaser.Scene {
       container.add(overBg);
 
       const lockTxt = this.add.text(cx, cy, `Cog ${char.cog}\n상한 초과`, {
-        fontSize: scaledFontSize(10, this.scale),
+        fontSize: FontManager.adjustedSize(10, this.scale),
         fill: '#3d2010', fontFamily: FontManager.MONO, align: 'center',
       }).setOrigin(0.5);
       container.add(lockTxt);
@@ -438,7 +438,7 @@ class PartyScene extends Phaser.Scene {
     // 출발 버튼
     const startBg = this.add.graphics();
     const startTxt = this.add.text(W / 2, btnY, '출  발', {
-      fontSize: scaledFontSize(18, this.scale),
+      fontSize: FontManager.adjustedSize(18, this.scale),
       fill: '#c8a070', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
 
@@ -483,7 +483,7 @@ class PartyScene extends Phaser.Scene {
 
     // 파티 인원 카운트 표시
     this._partyCountTxt = this.add.text(W / 2, btnY - btnH / 2 - 14, '', {
-      fontSize: scaledFontSize(11, this.scale),
+      fontSize: FontManager.adjustedSize(11, this.scale),
       fill: '#4a2a10', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
 

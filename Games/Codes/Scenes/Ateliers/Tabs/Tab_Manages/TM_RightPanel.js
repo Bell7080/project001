@@ -53,7 +53,7 @@ const TM_RightPanel = {
     tab._detailTweens    = [];
 
     const { scene, W, H } = tab;
-    const fs   = n => scaledFontSize(n, scene.scale);
+    const fs   = n => FontManager.adjustedSize(n, scene.scale);
     const pm   = tab._panelMargin || 0;
     const rx   = tab._listW + tab._centerW + pm;
     const ry   = tab._bodyY;
@@ -74,8 +74,8 @@ const TM_RightPanel = {
 
     // ════════════════════════════════════════════════════════════
     //  ✏️ 툴팁 헬퍼 — 개선된 버전
-    //    · 이름(제목): scaledFontSize(16) — 해상도 비례
-    //    · 설명:       scaledFontSize(13) — 해상도 비례
+    //    · 이름(제목): FontManager.adjustedSize(16) — 해상도 비례
+    //    · 설명:       FontManager.adjustedSize(13) — 해상도 비례
     //    · 최대 너비:  W * 0.22           — 화면 폭 비례
     //    · 좌측 정렬, 내용량에 따라 박스 자동 크기 조절
     // ════════════════════════════════════════════════════════════

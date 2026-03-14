@@ -42,20 +42,20 @@ const Settings_Tab_Keys = {
 
     // ✏️ 섹션 라벨 Y: H * 0.295 → H * 0.310
     scene.add.text(leftX, H * 0.310, '[ 키 설정 ]', {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     scene.add.text(W - marginX, H * 0.310, 'ESC — 변경 취소', {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: FontManager.adjustedSize(13, scene.scale),
       fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(1, 0.5);
 
     const waitTextY = areaTop + areaH + H * 0.025;
     const waitText  = scene.add.text(cx, waitTextY, '', {
-      fontSize: scaledFontSize(15, scene.scale),
+      fontSize: FontManager.adjustedSize(15, scene.scale),
       fill: '#a05018',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5).setDepth(50);
@@ -106,7 +106,7 @@ const Settings_Tab_Keys = {
 
     // ✏️ 액션 라벨 폰트: 15 → 18
     scene.add.text(labelX, cy, action.label, {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#6b4520',
       fontFamily: FontManager.BODY,
     }).setOrigin(0, 0.5);
@@ -114,7 +114,7 @@ const Settings_Tab_Keys = {
     const keyBg = scene.add.graphics();
     // ✏️ 키 텍스트 폰트: 14 → 17
     const keyText = scene.add.text(keyBtnX, cy, InputManager.displayName(action.key), {
-      fontSize: scaledFontSize(17, scene.scale),
+      fontSize: FontManager.adjustedSize(17, scene.scale),
       fill: '#a07040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5);

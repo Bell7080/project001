@@ -47,7 +47,7 @@ const Settings_Tab_Save = {
     const rowY     = sectionY + H * 0.038;
 
     scene.add.text(marginX, sectionY, '[ 내 저장 코드 ]', {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -64,7 +64,7 @@ const Settings_Tab_Save = {
 
     const display = exportCode.length > 50 ? exportCode.substring(0, 50) + '…' : exportCode;
     scene.add.text(marginX + W * 0.012, rowY + rowH / 2, display, {
-      fontSize: scaledFontSize(16, scene.scale),
+      fontSize: FontManager.adjustedSize(16, scene.scale),
       fill: '#5a3820',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -84,7 +84,7 @@ const Settings_Tab_Save = {
     const inputY   = sectionY + H * 0.038;
 
     scene.add.text(marginX, sectionY, '[ 저장 코드로 불러오기 ]', {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -103,13 +103,13 @@ const Settings_Tab_Save = {
     const placeholder = '여기에 저장 코드를 입력하세요…';
 
     const inputText = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, placeholder, {
-      fontSize: scaledFontSize(16, scene.scale),
+      fontSize: FontManager.adjustedSize(16, scene.scale),
       fill: '#3d2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10);
 
     const cursor = scene.add.text(marginX + W * 0.012, inputY + rowH / 2, '|', {
-      fontSize: scaledFontSize(17, scene.scale),
+      fontSize: FontManager.adjustedSize(17, scene.scale),
       fill: '#8a6040',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setDepth(10).setAlpha(0);
@@ -187,13 +187,13 @@ const Settings_Tab_Save = {
     sep.lineBetween(marginX, sectionY - H * 0.02, marginX + boxW + btnW + W * 0.04, sectionY - H * 0.02);
 
     scene.add.text(marginX, sectionY, '[ 초기화 ]', {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
 
     scene.add.text(marginX, sectionY + H * 0.038, '모든 저장 데이터와 설정을 삭제합니다', {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: FontManager.adjustedSize(13, scene.scale),
       fill: '#4a2810',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);

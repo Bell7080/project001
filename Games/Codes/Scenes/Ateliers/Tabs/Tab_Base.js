@@ -31,7 +31,7 @@ class Tab_Base {
   }
 
   // ── 폰트 크기 헬퍼 ──────────────────────────────────────────
-  _fs(n) { return scaledFontSize(n, this.scene.scale); }
+  _fs(n) { return FontManager.adjustedSize(n, this.scene.scale); }
 
   // ── 트윈 추적 헬퍼 ──────────────────────────────────────────
   _tween(cfg) {

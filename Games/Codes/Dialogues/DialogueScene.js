@@ -186,8 +186,8 @@ class DialogueScene extends Phaser.Scene {
   _buildScene(W, H) {
     // fs(n)   → "Npx" 문자열 (fontSize 프로퍼티에 직접 사용)
     // fsPx(n) → 정수 픽셀  (위치·크기 계산에 사용)
-    const fs   = n => scaledFontSize(n, this.scale);
-    const fsPx = n => parseInt(scaledFontSize(n, this.scale), 10);
+    const fs   = n => FontManager.adjustedSize(n, this.scale);
+    const fsPx = n => parseInt(FontManager.adjustedSize(n, this.scale), 10);
     this._fs = fsPx;   // 외부 메서드(_showLine 등)에서 정수가 필요할 때
 
     // ── 배경 ──────────────────────────────────────────────────
@@ -676,7 +676,7 @@ class DialogueScene extends Phaser.Scene {
     if (!choices || !choices.length) { this._cursor++; this._showLine(); return; }
 
     const fsPx = this._fs;   // 정수 픽셀 (위치·크기 계산)
-    const fs   = n => scaledFontSize(n, this.scale);  // "Npx" 문자열 (fontSize에 사용)
+    const fs   = n => FontManager.adjustedSize(n, this.scale);  // "Npx" 문자열 (fontSize에 사용)
     const { BOX_X, BOX_W, BOX_Y, BOX_H, PAD } = this._layout;
 
     const BTN_H = fsPx(44);

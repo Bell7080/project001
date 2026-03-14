@@ -45,7 +45,7 @@ const Settings_Tab_Video = {
     const optionGap = optionBoxH + H * 0.025;
 
     scene.add.text(marginX, section1Y, '[ 화면 모드 ]', {
-      fontSize: scaledFontSize(labelSize, scene.scale),
+      fontSize: FontManager.adjustedSize(labelSize, scene.scale),
       fill: '#3d2010',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -63,19 +63,19 @@ const Settings_Tab_Video = {
       scene.drawOptionBox(box, marginX, boxTop, contentW, optionBoxH, isSelected);
 
       scene.add.text(marginX + contentW * 0.055, y, isSelected ? '▶' : '·', {
-        fontSize: scaledFontSize(labelSize, scene.scale),
+        fontSize: FontManager.adjustedSize(labelSize, scene.scale),
         fill: isSelected ? '#a05018' : '#251508',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
 
       const nameText = scene.add.text(marginX + contentW * 0.09, y - optionBoxH * 0.16, opt.label, {
-        fontSize: scaledFontSize(titleSize, scene.scale),
+        fontSize: FontManager.adjustedSize(titleSize, scene.scale),
         fill: isSelected ? '#c8a070' : '#3d2010',
         fontFamily: FontManager.TITLE,
       }).setOrigin(0, 0.5);
 
       scene.add.text(marginX + contentW * 0.09, y + optionBoxH * 0.20, opt.desc, {
-        fontSize: scaledFontSize(14, scene.scale),
+        fontSize: FontManager.adjustedSize(14, scene.scale),
         fill: isSelected ? '#5a3820' : '#2a1508',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
@@ -112,7 +112,7 @@ const Settings_Tab_Video = {
     const lastOptY = option1Y + optionGap * (options.length - 1);
     const hintY    = lastOptY + optionBoxH * 0.55;
     scene.add.text(cx, hintY, 'F11 키로도 전체화면을 전환할 수 있습니다', {
-      fontSize: scaledFontSize(13, scene.scale),
+      fontSize: FontManager.adjustedSize(13, scene.scale),
       fill: '#2a1508',
       fontFamily: FontManager.MONO,
     }).setOrigin(0.5, 0);
@@ -142,7 +142,7 @@ const Settings_Tab_Video = {
 
     // ── 섹션 라벨 (오디오와 동일한 크기 18) ──────────────────
     scene.add.text(marginX, startY, '[ 심해 필터 ]', {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#5a3518',
       fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5);
@@ -159,14 +159,14 @@ const Settings_Tab_Video = {
 
     // 라벨 (위) — 오디오와 동일 스타일
     scene.add.text(marginX, sliderY - labelOffsetUp, '심해 필터 강도', {
-      fontSize: scaledFontSize(18, scene.scale),
+      fontSize: FontManager.adjustedSize(18, scene.scale),
       fill: '#8a5a30',
       fontFamily: FontManager.TITLE,
     }).setOrigin(0, 0.5);
 
     // 서브 라벨 (아래) — 오디오와 동일 스타일
     scene.add.text(marginX, sliderY + labelOffsetDown, 'SHADER', {
-      fontSize: scaledFontSize(12, scene.scale),
+      fontSize: FontManager.adjustedSize(12, scene.scale),
       fill: '#3a2010',
       fontFamily: FontManager.MONO,
       letterSpacing: 3,
@@ -175,7 +175,7 @@ const Settings_Tab_Video = {
     // 설명 — 서브 라벨 아래
     scene.add.text(marginX, sliderY + labelOffsetDown + H * 0.032,
       '화면 톤·비네팅·스캔라인 강도를 조절합니다', {
-        fontSize: scaledFontSize(13, scene.scale),
+        fontSize: FontManager.adjustedSize(13, scene.scale),
         fill: '#3d2810',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
@@ -217,7 +217,7 @@ const Settings_Tab_Video = {
     // 값 텍스트 (오디오와 동일 스타일: 16)
     const valueTxt = scene.add.text(valueX, sliderY - labelOffsetUp * 0.4,
       `${Math.round(ShaderManager.getIntensity() * 100)}%`, {
-        fontSize: scaledFontSize(16, scene.scale),
+        fontSize: FontManager.adjustedSize(16, scene.scale),
         fill: '#c8a070',
         fontFamily: FontManager.MONO,
       }).setOrigin(0, 0.5);
@@ -287,7 +287,7 @@ const Settings_Tab_Video = {
       drawBtn(false);
 
       scene.add.text(bx, presetY, p.label, {
-        fontSize: scaledFontSize(14, scene.scale),
+        fontSize: FontManager.adjustedSize(14, scene.scale),
         fill: '#3d2010',
         fontFamily: FontManager.MONO,
       }).setOrigin(0.5);

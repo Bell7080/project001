@@ -65,22 +65,22 @@ class ExploreScene extends Phaser.Scene {
     for (let x = 0; x <= W; x += step) grid.lineBetween(x, 0, x, H);
     for (let y = 0; y <= H; y += step) grid.lineBetween(0, y, W, y);
     this.add.text(W / 2, H / 2, 'EXPLORE', {
-      fontSize: scaledFontSize(90, this.scale), fill: '#0a0705', fontFamily: FontManager.TITLE,
+      fontSize: FontManager.adjustedSize(90, this.scale), fill: '#0a0705', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5).setAlpha(0.08);
   }
 
   _buildHeader(W, H) {
     this.add.text(W / 2, H * 0.09, '탐  색', {
-      fontSize: scaledFontSize(28, this.scale), fill: '#6b4020', fontFamily: FontManager.TITLE,
+      fontSize: FontManager.adjustedSize(28, this.scale), fill: '#6b4020', fontFamily: FontManager.TITLE,
     }).setOrigin(0.5);
-    this.add.text(W / 2, H * 0.09 + parseInt(scaledFontSize(26, this.scale)), 'DEEP SEA EXPLORATION', {
-      fontSize: scaledFontSize(11, this.scale), fill: '#2a1508', fontFamily: FontManager.MONO, letterSpacing: 4,
+    this.add.text(W / 2, H * 0.09 + parseInt(FontManager.adjustedSize(26, this.scale)), 'DEEP SEA EXPLORATION', {
+      fontSize: FontManager.adjustedSize(11, this.scale), fill: '#2a1508', fontFamily: FontManager.MONO, letterSpacing: 4,
     }).setOrigin(0.5);
     const lineG = this.add.graphics();
     lineG.lineStyle(1, 0x2a1a0a, 0.8);
     lineG.lineBetween(W * 0.05, H * 0.17, W * 0.95, H * 0.17);
     this._hintText = this.add.text(W / 2, H * 0.21, '이벤트를 불러오는 중...', {
-      fontSize: scaledFontSize(13, this.scale), fill: '#2a1508', fontFamily: FontManager.MONO,
+      fontSize: FontManager.adjustedSize(13, this.scale), fill: '#2a1508', fontFamily: FontManager.MONO,
     }).setOrigin(0.5);
   }
 
@@ -136,19 +136,19 @@ class ExploreScene extends Phaser.Scene {
     if (card.type === 'combat') {
       // "COG" 소문자 라벨
       const cogLabel = this.add.text(0, itemY - ch * 0.25, 'COG', {
-        fontSize: scaledFontSize(11, this.scale),
+        fontSize: FontManager.adjustedSize(11, this.scale),
         fill: card.color, fontFamily: FontManager.MONO, letterSpacing: 4, alpha: 0.55,
       }).setOrigin(0.5);
 
       // Cog 번호 (크게)
       const numTxt = this.add.text(0, itemY - ch * 0.03, card.mainText, {
-        fontSize: scaledFontSize(62, this.scale),
+        fontSize: FontManager.adjustedSize(62, this.scale),
         fill: card.color, fontFamily: FontManager.TITLE,
       }).setOrigin(0.5);
 
       // "전 투" (작게, 숫자 바로 아래)
       const typeTxt = this.add.text(0, itemY + ch * 0.26, card.label, {
-        fontSize: scaledFontSize(13, this.scale),
+        fontSize: FontManager.adjustedSize(13, this.scale),
         fill: card.color, fontFamily: FontManager.MONO, alpha: 0.8,
       }).setOrigin(0.5);
 
@@ -161,12 +161,12 @@ class ExploreScene extends Phaser.Scene {
 
     } else {
       const mainTxt = this.add.text(0, itemY - ch * 0.08, card.mainText, {
-        fontSize: scaledFontSize(54, this.scale),
+        fontSize: FontManager.adjustedSize(54, this.scale),
         fill: card.color, fontFamily: FontManager.TITLE,
       }).setOrigin(0.5);
 
       const subTxt = this.add.text(0, itemY + ch * 0.22, card.label, {
-        fontSize: scaledFontSize(14, this.scale),
+        fontSize: FontManager.adjustedSize(14, this.scale),
         fill: card.color, fontFamily: FontManager.MONO, alpha: 0.85,
       }).setOrigin(0.5);
 
@@ -176,7 +176,7 @@ class ExploreScene extends Phaser.Scene {
 
   _buildFooter(W, H) {
     const back = this.add.text(W * 0.08, H * 0.93, '← 공방으로', {
-      fontSize: scaledFontSize(17, this.scale), fill: '#3d2010', fontFamily: FontManager.MONO,
+      fontSize: FontManager.adjustedSize(17, this.scale), fill: '#3d2010', fontFamily: FontManager.MONO,
     }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
     back.on('pointerover', () => back.setStyle({ fill: '#c8a070' }));
     back.on('pointerout',  () => back.setStyle({ fill: '#3d2010' }));
