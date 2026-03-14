@@ -15,16 +15,14 @@
 
 // ── 커스터마이징 메인 진입 ────────────────────────────────────────
 
-Tab_Recruit.prototype._buildCustomize = function (result) {
-  this.result  = result;
-  this.rerolls = {
-    stat:     RECRUIT_MAX_REROLL,
-    sprite:   RECRUIT_MAX_REROLL,
-    position: RECRUIT_MAX_REROLL,
-    passive:  RECRUIT_MAX_REROLL,
-    skill:    RECRUIT_MAX_REROLL,
-  };
+Tab_Recruit.prototype._buildCustom = function () {
+  this._clear();
   this._statTexts = [];
+
+  const result = this.result;
+  if (!result.baseStats) result.baseStats = [...result.stats];
+  if (result.baseSum == null)
+    result.baseSum = result.stats ? result.stats.reduce((a, b) => a + b, 0) : 0;
 
   // result.baseStats 없으면 stats 복사해서 만들어줌
   if (!result.baseStats) {
